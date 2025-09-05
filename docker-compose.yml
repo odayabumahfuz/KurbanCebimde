@@ -1,0 +1,90 @@
+services:
+  api:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes: ["./kurban-cebimde/backend:/app"]
+    command: bash -lc "pip install -U pip && pip install fastapi uvicorn sqlalchemy alembic python-jose[cryptography] passlib[bcrypt] python-multipart email-validator python-decouple phonenumbers redis psycopg2-binary celery && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports: ["8000:8000"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/kurban_cebimde
+      - REDIS_URL=redis://redis:6379
+      - DEBUG=true
+      - MAINTENANCE_MODE=false
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - kurban-network
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=kurban_cebimde
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kurban-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kurban-network
+
+  celery:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes: ["./kurban-cebimde/backend:/app"]
+    command: bash -lc "pip install -U pip && pip install celery redis psycopg2-binary && celery -A app.celery_app worker --loglevel=info"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/kurban_cebimde
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - kurban-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - kurban-network
+
+  admin-panel:
+    image: node:18-alpine
+    working_dir: /app
+    volumes: ["./kurban-cebimde/admin-panel:/app"]
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - kurban-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  kurban-network:
+    driver: bridge
+
+
+
+

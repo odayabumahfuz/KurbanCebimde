@@ -122,8 +122,22 @@ npm install -g @expo/cli
 # Install dependencies
 npm install
 
-# Start Expo development server
-npx expo start
+# Start Expo development server (tunnel ve API base ile)
+EXPO_PUBLIC_API_BASE=http://localhost:8000 npx expo start --port 8082 --tunnel
+
+## 🔌 API Base Configuration
+
+- Android emulator: `http://10.0.2.2:8000`
+- iOS simulator: `http://127.0.0.1:8000`
+- Real device: `http://<your-machine-ip>:8000`
+
+You can override using environment:
+
+```bash
+EXPO_PUBLIC_API_BASE=http://<ip>:8000 npm run start:metro
+```
+
+The app reads base URL from `process.env.EXPO_PUBLIC_API_BASE` with fallbacks (see `src/lib/api.js`).
 ```
 
 ## 🔧 Development Commands

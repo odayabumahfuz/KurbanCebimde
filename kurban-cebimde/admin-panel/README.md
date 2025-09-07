@@ -54,7 +54,7 @@ VITE_APP_VERSION=1.0.0
 npm run dev
 ```
 
-Admin panel http://localhost:3001 adresinde açılacaktır.
+Admin panel geliştirme modunda `http://localhost:3001` adresinde açılır. Docker Compose ile çalıştırılırsa `http://localhost:3000` üzerinden proxy ile sunulabilir.
 
 ## 🔐 Giriş
 

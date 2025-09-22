@@ -2,28 +2,47 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { tokens } from '../theme/tokens';
+import { font } from '../theme/typography';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const iconByRoute = {
   Anasayfa: 'home-outline',
   'Bağış Yap': 'heart-outline',
   'Bağış Sepeti': 'bag-handle-outline',
   Hesabım: 'person-outline',
+  Yayın: 'videocam-outline',
+  Profil: 'person-outline',
 };
 
 export default function TabBar({ state, descriptors, navigation }) {
   const { count } = useCart();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
+          // Dil desteği için label çevirisi
+          const getTranslatedLabel = (routeName) => {
+            const translations = {
+              'Anasayfa': t('home.navigation.home'),
+              'Bağış Yap': t('home.navigation.donate'),
+              'Bağış Sepeti': t('home.navigation.cart'),
+              'Hesabım': t('home.navigation.account'),
+              'Yayın': t('home.navigation.streams'),
+              'Profil': t('home.navigation.profile')
+            };
+            return translations[routeName] || routeName;
+          };
+
           const label = options.tabBarLabel !== undefined
             ? options.tabBarLabel
             : options.title !== undefined
             ? options.title
-            : route.name;
+            : getTranslatedLabel(route.name);
 
           const isFocused = state.index === index;
           const onPress = () => {
@@ -54,26 +73,52 @@ export default function TabBar({ state, descriptors, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { backgroundColor: 'transparent' },
+  wrapper: { 
+    backgroundColor: 'transparent', 
+    borderTopWidth: 0,
+  },
   container: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderTopWidth: 0,
-    paddingTop: 8,
-    paddingBottom: 12,
-    paddingHorizontal: 8,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: -2 },
-    shadowRadius: 8,
+    paddingTop: 10,
+    paddingBottom: 14,
+    paddingHorizontal: 10,
+    elevation: 0,
+    borderTopLeftRadius: tokens.radii.xl,
+    borderTopRightRadius: tokens.radii.xl,
+    borderWidth: tokens.stroke.width,
+    borderColor: colors.border,
+    borderBottomWidth: 0,
   },
-  tab: { flex: 1, alignItems: 'center' },
-  label: { fontSize: 12, marginTop: 4, fontWeight: '600' },
+  tab: { 
+    flex: 1, 
+    alignItems: 'center',
+  },
+  label: { 
+    fontSize: 12, 
+    marginTop: 6, 
+    fontWeight: '700',
+    fontFamily: font.bold,
+  },
   badge: {
-    position: 'absolute', right: -10, top: -6, backgroundColor: colors.brand, borderRadius: 10, paddingHorizontal: 5, height: 18, minWidth: 18, alignItems: 'center', justifyContent: 'center'
+    position: 'absolute', 
+    right: -10, 
+    top: -6, 
+    backgroundColor: colors.danger, 
+    borderRadius: 10, 
+    paddingHorizontal: 5, 
+    height: 18, 
+    minWidth: 18, 
+    alignItems: 'center', 
+    justifyContent: 'center',
   },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  badgeText: { 
+    color: '#fff', 
+    fontSize: 11, 
+    fontWeight: '700',
+    fontFamily: font.bold,
+  },
 });
 
 

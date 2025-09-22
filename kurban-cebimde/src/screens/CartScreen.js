@@ -1,21 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 import { colors } from '../theme/colors';
+import BgPattern from '../components/BgPattern';
 
 export default function CartScreen({ navigation }) {
   const { items, removeItemById, total, clearCart, updateItemQuantity } = useCart();
+  const { t } = useLanguage();
   function goCheckout(navigation, amount) {
     navigation.navigate('Checkout', { total: amount });
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Sepetim</Text>
+      <BgPattern />
+      <Text style={styles.heading}>{t('cart.title')}</Text>
       <FlatList
         data={items}
         keyExtractor={it => String(it.id)}
-        ListEmptyComponent={<Text style={{ color: '#6B7280' }}>Sepet boş</Text>}
+        ListEmptyComponent={<Text style={{ color: '#6B7280' }}>{t('cart.empty')}</Text>}
         renderItem={({ item }) => (
           <View style={styles.row}>
             <Image source={item?.meta?.image || require('../../assets/favicon.png')} style={styles.thumb} />
@@ -35,7 +39,7 @@ export default function CartScreen({ navigation }) {
               {/* Hisse/Adet sadece büyükbaş için hisse olarak gösterilir */}
               {String(item?.meta?.animal || '').toLowerCase().includes('büyükbaş') ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                  <Text style={{ color: '#6B7280', marginRight: 6 }}>Hisse:</Text>
+                  <Text style={{ color: '#6B7280', marginRight: 6 }}>{t('donation.amount')}:</Text>
                   <TouchableOpacity onPress={() => updateItemQuantity(item.id, (Number(item.qty||1)-1)||1)}><Text style={{ paddingHorizontal: 8 }}>-</Text></TouchableOpacity>
                   <Text>{item.qty || 1}</Text>
                   <TouchableOpacity onPress={() => updateItemQuantity(item.id, Number(item.qty||1)+1)}><Text style={{ paddingHorizontal: 8 }}>+</Text></TouchableOpacity>
@@ -43,19 +47,19 @@ export default function CartScreen({ navigation }) {
               ) : null}
             </View>
             <TouchableOpacity onPress={() => removeItemById(item.id)}>
-              <Text style={{ color: colors.danger, marginLeft: 8 }}>Sil</Text>
+              <Text style={{ color: colors.danger, marginLeft: 8 }}>{t('common.delete')}</Text>
             </TouchableOpacity>
           </View>
         )}
       />
 
       <View style={styles.footer}>
-        <Text style={styles.totalLabel}>Toplam bağış tutarı:</Text>
+        <Text style={styles.totalLabel}>{t('cart.total')}:</Text>
         <Text style={styles.totalValue}>₺ {Number(total).toLocaleString('tr-TR')}</Text>
       </View>
 
       <TouchableOpacity style={styles.primaryBtn} onPress={() => goCheckout(navigation, total)}>
-        <Text style={styles.primaryBtnText}>Bağışı Tamamla</Text>
+        <Text style={styles.primaryBtnText}>{t('cart.checkout')}</Text>
       </TouchableOpacity>
     </View>
   );

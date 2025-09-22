@@ -1,10 +1,117 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Layout from '../components/Layout';
+// UI Components - Basit versiyonlar
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={`card ${className || ''}`}>
+    {children}
+  </div>
+);
+
+const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={`p-6 pb-0 ${className || ''}`}>
+    {children}
+  </div>
+);
+
+const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <h3 className={`text-lg font-semibold text-zinc-900 dark:text-zinc-100 ${className || ''}`}>
+    {children}
+  </h3>
+);
+
+const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={`p-6 ${className || ''}`}>
+    {children}
+  </div>
+);
+
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'outline' | 'default' }> = ({ 
+  children, 
+  className, 
+  variant = 'default',
+  ...props 
+}) => (
+  <button 
+    {...props}
+    className={`${variant === 'outline' ? 'btn-secondary' : 'btn-primary'} ${className || ''}`}
+  >
+    {children}
+  </button>
+);
+
+const Badge: React.FC<{ children: React.ReactNode; variant?: 'default' | 'destructive' }> = ({ 
+  children, 
+  variant = 'default' 
+}) => (
+  <span className={`status-badge ${
+    variant === 'destructive' 
+      ? 'status-failed'
+      : 'status-active'
+  }`}>
+    {children}
+  </span>
+);
+
+const Alert: React.FC<{ children: React.ReactNode; variant?: 'default' | 'destructive' }> = ({ 
+  children, 
+  variant = 'default' 
+}) => (
+  <div className={`p-4 rounded-lg border ${
+    variant === 'destructive' 
+      ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900 dark:border-red-800 dark:text-red-200'
+      : 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900 dark:border-blue-800 dark:text-blue-200'
+  }`}>
+    {children}
+  </div>
+);
+
+const AlertDescription: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="text-sm">
+    {children}
+  </div>
+);
+
+const Tabs: React.FC<{ children: React.ReactNode; defaultValue?: string; className?: string }> = ({ 
+  children, 
+  defaultValue,
+  className 
+}) => (
+  <div className={className || ''}>
+    {children}
+  </div>
+);
+
+const TabsList: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={`flex space-x-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1 ${className || ''}`}>
+    {children}
+  </div>
+);
+
+const TabsTrigger: React.FC<{ 
+  children: React.ReactNode; 
+  value: string; 
+  className?: string;
+  onClick?: () => void;
+}> = ({ children, value, className, onClick }) => (
+  <button 
+    onClick={onClick}
+    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+      className || ''
+    }`}
+  >
+    {children}
+  </button>
+);
+
+const TabsContent: React.FC<{ 
+  children: React.ReactNode; 
+  value: string; 
+  className?: string;
+}> = ({ children, value, className }) => (
+  <div className={className || ''}>
+    {children}
+  </div>
+);
 import { 
   Server, 
   Database, 
@@ -24,6 +131,8 @@ import {
   TrendingUp,
   TrendingDown
 } from "lucide-react";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 interface SystemInfo {
   cpu_usage: string;
@@ -83,9 +192,7 @@ const BackendStatusPage: React.FC = () => {
     { name: 'Health Check', method: 'GET', url: '/health' },
     { name: 'Admin Users', method: 'GET', url: '/api/admin/v1/users' },
     { name: 'Admin Donations', method: 'GET', url: '/api/admin/v1/donations' },
-    { name: 'Mobile Login', method: 'POST', url: '/api/auth/login' },
-    { name: 'User Profile', method: 'GET', url: '/api/user/profile' },
-    { name: 'Cart Items', method: 'GET', url: '/api/cart/items' },
+    { name: 'Admin Carts', method: 'GET', url: '/api/admin/v1/carts' },
     { name: 'Monitor Logs', method: 'GET', url: '/api/monitor/logs' },
     { name: 'Monitor System', method: 'GET', url: '/api/monitor/system' },
     { name: 'Monitor Status', method: 'GET', url: '/api/monitor/status' }
@@ -93,7 +200,7 @@ const BackendStatusPage: React.FC = () => {
 
   const fetchSystemInfo = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/monitor/system');
+      const response = await fetch(`${API_BASE}/api/monitor/system`);
       if (response.ok) {
         const data = await response.json();
         setSystemInfo(data);
@@ -105,7 +212,7 @@ const BackendStatusPage: React.FC = () => {
 
   const fetchServiceStatus = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/monitor/status');
+      const response = await fetch(`${API_BASE}/api/monitor/status`);
       if (response.ok) {
         const data = await response.json();
         setServiceStatus(data);
@@ -117,7 +224,7 @@ const BackendStatusPage: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/monitor/logs');
+      const response = await fetch(`${API_BASE}/api/monitor/logs`);
       if (response.ok) {
         const data = await response.json();
         setLogs(data.logs || []);
@@ -132,7 +239,7 @@ const BackendStatusPage: React.FC = () => {
       apiEndpointsList.map(async (endpoint) => {
         const startTime = Date.now();
         try {
-          const response = await fetch(`http://localhost:8000${endpoint.url}`, {
+          const response = await fetch(`${API_BASE}${endpoint.url}`, {
             method: 'GET',
             mode: 'cors'
           });
@@ -234,7 +341,7 @@ const BackendStatusPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

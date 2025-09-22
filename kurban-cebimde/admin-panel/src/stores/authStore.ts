@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { adminApi } from '@/lib/adminApi'
+import { adminApi } from '../lib/adminApi'
 
 interface User {
   id: string
@@ -37,8 +37,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
         
         try {
-          // Admin API login çağrısı
-          const response = await adminApi.login({ username, password })
+          // Admin API login çağrısı - phoneOrEmail olarak username'i kullan
+          const response = await adminApi.login({ phoneOrEmail: username, password })
           
           // API'den gelen kullanıcı bilgilerini kullan
           const user: User = {

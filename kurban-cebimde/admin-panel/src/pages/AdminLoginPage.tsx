@@ -5,7 +5,7 @@ import { ShieldCheck, User, Lock, ArrowRight } from 'lucide-react';
 
 const AdminLoginPage: React.FC = () => {
   const [credentials, setCredentials] = useState<AdminLoginRequest>({
-    username: '',
+    phoneOrEmail: '',
     password: '',
     otp_code: ''
   });
@@ -68,14 +68,14 @@ const AdminLoginPage: React.FC = () => {
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-zinc-400" />
                 <input
-                  id="username"
-                  name="username"
+                  id="phoneOrEmail"
+                  name="phoneOrEmail"
                   type="text"
                   autoComplete="username"
                   required
                   className="w-full pl-10 pr-3 py-3 border border-zinc-300 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 focus:border-transparent transition-all"
-                  placeholder="admin"
-                  value={credentials.username}
+                  placeholder="admin@kurbancebimde.com"
+                  value={credentials.phoneOrEmail}
                   onChange={handleInputChange}
                 />
               </div>
@@ -182,18 +182,7 @@ const AdminLoginPage: React.FC = () => {
             </button>
           </div>
         </form>
-
-        <div className="text-center">
-          <div className="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-4">
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-2">
-              Demo Kullanıcı Bilgileri:
-            </p>
-            <div className="text-xs text-zinc-700 dark:text-zinc-300 space-y-1">
-              <p><strong>Kullanıcı:</strong> oday</p>
-              <p><strong>Şifre:</strong> admin123</p>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

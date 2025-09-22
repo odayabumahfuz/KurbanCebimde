@@ -23,8 +23,6 @@ import { useAuth } from '../context/AuthContext';
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -62,10 +60,12 @@ export default function LoginScreen({ navigation }) {
     setIsLoading(true);
     
     try {
-      const result = await login(phoneNumber, password);
+      // Tam telefon numarasını oluştur
+      const fullPhoneNumber = `+90${phoneNumber}`;
+      const result = await login(fullPhoneNumber, password);
       if (result.success) {
-        // Başarılı giriş - ana sayfaya yönlendir
-        navigation.replace('RootTabs');
+        // Başarılı giriş - authentication state değişecek ve otomatik yönlendirilecek
+        console.log('✅ Login başarılı, authentication state değişecek');
       } else {
         Alert.alert('Hata', result.error || 'Giriş yapılamadı');
       }
@@ -110,14 +110,15 @@ export default function LoginScreen({ navigation }) {
           {/* Phone Number Input */}
           <View style={styles.inputWrapper}>
             <Ionicons name="call-outline" size={24} color="#6B7280" />
+            <Text style={styles.countryCodeText}>+90</Text>
             <TextInput
               style={styles.textInput}
               placeholder="5XX XXX XX XX"
               placeholderTextColor="#9CA3AF"
               value={phoneNumber}
-              onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
+              onChangeText={(text) => setPhoneNumber(text.replace(/\D/g, ''))}
               keyboardType="phone-pad"
-              maxLength={15}
+              maxLength={10}
               autoFocus
             />
           </View>
@@ -201,6 +202,7 @@ export default function LoginScreen({ navigation }) {
           </ScrollView>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
+
     </SafeAreaView>
   );
 }
@@ -296,6 +298,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: '100%',
     marginBottom: 24,
+  },
+  countryCodeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginRight: 12,
   },
   inputWrapper: {
     flexDirection: 'row',

@@ -1,288 +1,83 @@
 import { useState } from 'react'
-import { Package, Plus, Edit, Trash2, Eye } from 'lucide-react'
+import Layout from '../components/Layout'
+import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 
 export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Page header */}
-      <div>
-        <h1 style={{
-          fontSize: '1.5rem',
-          fontWeight: '700',
-          color: '#111827'
-        }}>Katalog Yönetimi</h1>
-        <p style={{
-          color: '#6b7280',
-          marginTop: '0.25rem'
-        }}>
-          Kurban türleri, fiyatlar ve bölge bilgilerini yönetin
-        </p>
-      </div>
-
-      {/* Actions bar */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        alignItems: 'center',
-        flexWrap: 'wrap'
-      }}>
-        <button style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.75rem 1rem',
-          backgroundColor: '#10b981',
-          color: 'white',
-          border: 'none',
-          borderRadius: '0.5rem',
-          fontSize: '0.875rem',
-          fontWeight: '500',
-          cursor: 'pointer'
-        }}>
-          <Plus style={{ height: '1rem', width: '1rem' }} />
-          Yeni Ürün Ekle
-        </button>
-
-        <div style={{ position: 'relative', flex: '1', minWidth: '300px' }}>
-          <input
-            type="text"
-            placeholder="Katalog ürünlerinde ara..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
-              outline: 'none'
-            }}
-          />
-        </div>
-        
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          style={{
-            padding: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.5rem',
-            fontSize: '0.875rem',
-            outline: 'none',
-            backgroundColor: 'white'
-          }}
-        >
-          <option value="all">Tüm Kategoriler</option>
-          <option value="koc">Koç</option>
-          <option value="koyun">Koyun</option>
-          <option value="buyukbas">Büyükbaş</option>
-        </select>
-      </div>
-
-      {/* Catalog grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '1.5rem'
-      }}>
-        {/* Sample catalog items */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e5e7eb',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            height: '200px',
-            backgroundColor: '#f3f4f6',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+    <Layout>
+      <div className="p-6 space-y-6">
+        {/* Page header */}
+        <div>
+          <h1 style={{
+            fontSize: '1.5rem',
+            fontWeight: '700',
+            color: '#111827'
+          }}>Katalog Yönetimi</h1>
+          <p style={{
+            color: '#6b7280',
+            marginTop: '0.25rem'
           }}>
-            <Package style={{ height: '3rem', width: '3rem', color: '#9ca3af' }} />
-          </div>
-          <div style={{ padding: '1.5rem' }}>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: '#111827',
-              marginBottom: '0.5rem'
-            }}>Koç - Türkiye</h3>
-            <p style={{
-              color: '#6b7280',
-              fontSize: '0.875rem',
-              marginBottom: '1rem'
-            }}>Yüksek kalite koç, taze ve sağlıklı</p>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1rem'
-            }}>
-              <span style={{
-                fontSize: '1.25rem',
-                fontWeight: '700',
-                color: '#10b981'
-              }}>₺850</span>
-              <span style={{
-                fontSize: '0.875rem',
-                color: '#6b7280'
-              }}>Stok: 15</span>
-            </div>
-            <div style={{
-              display: 'flex',
-              gap: '0.5rem'
-            }}>
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem 0.75rem',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}>
-                <Eye style={{ height: '0.875rem', width: '0.875rem' }} />
-                Görüntüle
-              </button>
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem 0.75rem',
-                backgroundColor: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}>
-                <Edit style={{ height: '0.875rem', width: '0.875rem' }} />
-                Düzenle
-              </button>
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem 0.75rem',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}>
-                <Trash2 style={{ height: '0.875rem', width: '0.875rem' }} />
-                Sil
-              </button>
-            </div>
-          </div>
+            Kurban türleri, fiyatlar ve bölge bilgilerini yönetin
+          </p>
         </div>
 
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e5e7eb',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            height: '200px',
-            backgroundColor: '#f3f4f6',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Package style={{ height: '3rem', width: '3rem', color: '#9ca3af' }} />
+        {/* Search and Filter */}
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Ürün ara..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-          <div style={{ padding: '1.5rem' }}>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: '#111827',
-              marginBottom: '0.5rem'
-            }}>Koyun - Afrika</h3>
-            <p style={{
-              color: '#6b7280',
-              fontSize: '0.875rem',
-              marginBottom: '1rem'
-            }}>Afrika bölgesi özel koyun türü</p>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1rem'
-            }}>
-              <span style={{
-                fontSize: '1.25rem',
-                fontWeight: '700',
-                color: '#10b981'
-              }}>₺650</span>
-              <span style={{
-                fontSize: '0.875rem',
-                color: '#6b7280'
-              }}>Stok: 8</span>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Tüm Kategoriler</option>
+            <option value="cattle">Sığır</option>
+            <option value="sheep">Koyun</option>
+            <option value="goat">Keçi</option>
+          </select>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+            <Plus size={16} />
+            Yeni Ürün
+          </button>
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((item) => (
+            <div key={item} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">Ürün {item}</h3>
+                <div className="flex gap-2">
+                  <button className="p-2 text-gray-400 hover:text-blue-600">
+                    <Edit size={16} />
+                  </button>
+                  <button className="p-2 text-gray-400 hover:text-red-600">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-2">Kategori: Sığır</p>
+              <p className="text-sm text-gray-600 mb-4">Fiyat: ₺2,500</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-green-600 font-medium">Stokta</span>
+                <button className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200">
+                  Düzenle
+                </button>
+              </div>
             </div>
-            <div style={{
-              display: 'flex',
-              gap: '0.5rem'
-            }}>
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem 0.75rem',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}>
-                <Eye style={{ height: '0.875rem', width: '0.875rem' }} />
-                Görüntüle
-              </button>
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem 0.75rem',
-                backgroundColor: '#f59e0b',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}>
-                <Edit style={{ height: '0.875rem', width: '0.875rem' }} />
-                Düzenle
-              </button>
-              <button style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.5rem 0.75rem',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}>
-                <Trash2 style={{ height: '0.875rem', width: '0.875rem' }} />
-                Sil
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
-    </div>
+    </Layout>
   )
 }

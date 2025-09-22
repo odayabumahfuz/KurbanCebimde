@@ -1,0 +1,135 @@
+{
+  "summary": {
+    "total_tests": 17,
+    "successful_tests": 11,
+    "failed_tests": 6,
+    "success_rate": 64.70588235294117
+  },
+  "tests": [
+    {
+      "test_name": "Health Check",
+      "success": true,
+      "details": "Status: ok",
+      "data": {
+        "status": "ok",
+        "message": "KurbanCebimde API is running"
+      },
+      "timestamp": "2025-09-12T09:45:06.517908"
+    },
+    {
+      "test_name": "Swagger UI",
+      "success": true,
+      "details": "Status: 200",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:06.563510"
+    },
+    {
+      "test_name": "ReDoc",
+      "success": true,
+      "details": "Status: 200",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:06.607420"
+    },
+    {
+      "test_name": "OpenAPI JSON",
+      "success": true,
+      "details": "Found 21 endpoints",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:06.652304"
+    },
+    {
+      "test_name": "Admin Panel",
+      "success": true,
+      "details": "Status: 200",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:06.657394"
+    },
+    {
+      "test_name": "React Native Web",
+      "success": true,
+      "details": "Status: 200",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:06.663576"
+    },
+    {
+      "test_name": "Expo Dev Server",
+      "success": true,
+      "details": "Status: 200",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:06.682607"
+    },
+    {
+      "test_name": "User Registration",
+      "success": true,
+      "details": "User ID: 7ef0b482-437c-45c8-858d-bc34ecbe7da0",
+      "data": {
+        "message": "Kayıt başarılı",
+        "user_id": "7ef0b482-437c-45c8-858d-bc34ecbe7da0"
+      },
+      "timestamp": "2025-09-12T09:45:07.399443"
+    },
+    {
+      "test_name": "User Login",
+      "success": false,
+      "details": "HTTP 401: {\"detail\":\"Geçersiz telefon/email veya şifre\"}",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.447393"
+    },
+    {
+      "test_name": "User Profile",
+      "success": false,
+      "details": "No token available",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.447481"
+    },
+    {
+      "test_name": "Donation Create",
+      "success": false,
+      "details": "No token available",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.447525"
+    },
+    {
+      "test_name": "Donation List",
+      "success": false,
+      "details": "No token available",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.447542"
+    },
+    {
+      "test_name": "Streams List",
+      "success": false,
+      "details": "No token available",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.447572"
+    },
+    {
+      "test_name": "Admin Login",
+      "success": false,
+      "details": "HTTP 422: {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"username\"],\"msg\":\"Field required\",\"input\":{\"phoneOrEmail\":\"admin@kurbancebimde.com\",\"password\":\"admin123\"}}]}",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.495385"
+    },
+    {
+      "test_name": "Invalid Endpoint",
+      "success": true,
+      "details": "Status: 404",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.539457"
+    },
+    {
+      "test_name": "Invalid Token",
+      "success": true,
+      "details": "Status: 401",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.587391"
+    },
+    {
+      "test_name": "Invalid Data",
+      "success": true,
+      "details": "Status: 422",
+      "data": null,
+      "timestamp": "2025-09-12T09:45:07.631424"
+    }
+  ]
+}

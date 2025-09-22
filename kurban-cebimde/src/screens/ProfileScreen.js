@@ -1,24 +1,98 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
+import { tokens } from '../theme/tokens';
+import { font } from '../theme/typography';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { api } from '../lib/api';
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
+  const { user, updateProfile, logout } = useAuth();
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState({
-    name: 'Ahmet',
-    surname: 'Yılmaz',
-    email: 'ahmet.yilmaz@email.com',
-    phone: '+90 555 123 45 67',
+    name: '',
+    surname: '',
+    email: '',
+    phone: '',
     avatar: null
   });
 
   const [editData, setEditData] = useState({ ...profileData });
+  const [stats, setStats] = useState({
+    totalDonations: 0,
+    totalAmount: 0,
+    activeCampaigns: 0
+  });
 
-  const handleSave = () => {
-    setProfileData(editData);
-    setIsEditing(false);
-    Alert.alert('Başarılı', 'Profil bilgileri güncellendi');
+  useEffect(() => {
+    loadUserProfile();
+    loadUserStats();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      if (user) {
+        setProfileData({
+          name: user.name || '',
+          surname: user.surname || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          avatar: user.avatar || null
+        });
+        setEditData({
+          name: user.name || '',
+          surname: user.surname || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          avatar: user.avatar || null
+        });
+      }
+    } catch (error) {
+      console.error('Profil yükleme hatası:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserStats = async () => {
+    try {
+      const response = await api.get('/donations/stats');
+      setStats(response.data);
+    } catch (error) {
+      console.error('İstatistik yükleme hatası:', error);
+      // Fallback stats
+      setStats({
+        totalDonations: 0,
+        totalAmount: 0,
+        activeCampaigns: 0
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      
+      // API çağrısı yap
+      await updateProfile(editData);
+      
+      // Local state'i güncelle
+      setProfileData(editData);
+      setIsEditing(false);
+      
+      Alert.alert(t('common.success'), 'Profil bilgileri güncellendi');
+    } catch (error) {
+      console.error('Profil güncelleme hatası:', error);
+      Alert.alert(t('common.error'), 'Profil güncellenemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -29,47 +103,55 @@ export default function ProfileScreen() {
   const menuItems = [
     {
       icon: 'person-outline',
-      title: 'Kişisel Bilgiler',
-      subtitle: 'Ad, soyad, telefon bilgileri',
+      title: t('profile.personalInfo'),
+      subtitle: t('profile.personalInfoSubtitle'),
       onPress: () => setIsEditing(true)
     },
     {
       icon: 'notifications-outline',
-      title: 'Bildirimler',
-      subtitle: 'E-posta ve SMS bildirimleri',
-      onPress: () => Alert.alert('Bildirimler', 'Bildirim ayarları açılıyor...')
+      title: t('profile.notifications'),
+      subtitle: t('profile.notificationsSubtitle'),
+      onPress: () => Alert.alert(t('profile.notifications'), 'Bildirim ayarları açılıyor...')
     },
     {
       icon: 'shield-outline',
-      title: 'Güvenlik',
-      subtitle: 'Şifre ve güvenlik ayarları',
-      onPress: () => Alert.alert('Güvenlik', 'Güvenlik ayarları açılıyor...')
+      title: t('profile.security'),
+      subtitle: t('profile.securitySubtitle'),
+      onPress: () => Alert.alert(t('profile.security'), 'Güvenlik ayarları açılıyor...')
     },
     {
       icon: 'card-outline',
-      title: 'Ödeme Yöntemleri',
-      subtitle: 'Kredi kartı ve banka kartları',
+      title: t('profile.paymentMethods'),
+      subtitle: t('profile.paymentMethodsSubtitle'),
       onPress: () => Alert.alert('Ödeme', 'Ödeme yöntemleri açılıyor...')
     },
     {
       icon: 'globe-outline',
-      title: 'Dil ve Bölge',
-      subtitle: 'Türkçe, UTC+3',
-      onPress: () => Alert.alert('Dil', 'Dil ayarları açılıyor...')
+      title: t('profile.language'),
+      subtitle: t('profile.languageSubtitle'),
+      onPress: () => navigation.navigate('Ayarlarım')
     },
     {
       icon: 'help-circle-outline',
-      title: 'Yardım ve Destek',
-      subtitle: 'SSS ve iletişim bilgileri',
-      onPress: () => Alert.alert('Yardım', 'Yardım sayfası açılıyor...')
+      title: t('profile.help'),
+      subtitle: t('profile.helpSubtitle'),
+      onPress: () => Alert.alert(t('profile.help'), 'Yardım sayfası açılıyor...')
     },
     {
       icon: 'information-circle-outline',
-      title: 'Hakkında',
-      subtitle: 'Uygulama versiyonu ve lisans',
-      onPress: () => Alert.alert('Hakkında', 'Uygulama bilgileri açılıyor...')
+      title: t('profile.about'),
+      subtitle: t('profile.aboutSubtitle'),
+      onPress: () => Alert.alert(t('profile.about'), 'Uygulama bilgileri açılıyor...')
     }
   ];
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -81,17 +163,25 @@ export default function ProfileScreen() {
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
-        <View style={styles.avatarContainer}>
-          {profileData.avatar ? (
-            <Image source={{ uri: profileData.avatar }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color="#9ca3af" />
-            </View>
-          )}
-          <TouchableOpacity style={styles.editAvatarButton}>
-            <Ionicons name="camera" size={16} color="white" />
-          </TouchableOpacity>
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarContainer}>
+            {profileData.avatar ? (
+              <Image source={{ uri: profileData.avatar }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons name="person" size={50} color="#9ca3af" />
+              </View>
+            )}
+            <TouchableOpacity style={styles.editAvatarButton}>
+              <Ionicons name="camera" size={18} color="white" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{profileData.name} {profileData.surname}</Text>
+            <Text style={styles.profileEmail}>{profileData.email}</Text>
+            <Text style={styles.profilePhone}>{profileData.phone}</Text>
+          </View>
         </View>
 
         {isEditing ? (
@@ -141,40 +231,34 @@ export default function ProfileScreen() {
 
             <View style={styles.editButtons}>
               <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                <Text style={styles.cancelButtonText}>İptal</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                <Text style={styles.saveButtonText}>Kaydet</Text>
+                <Text style={styles.saveButtonText}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : (
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{profileData.name} {profileData.surname}</Text>
-            <Text style={styles.profileEmail}>{profileData.email}</Text>
-            <Text style={styles.profilePhone}>{profileData.phone}</Text>
-            
-            <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-              <Ionicons name="create-outline" size={16} color="#3b82f6" />
-              <Text style={styles.editButtonText}>Düzenle</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
+            <Ionicons name="create-outline" size={18} color="#3b82f6" />
+            <Text style={styles.editButtonText}>{t('profile.editProfile')}</Text>
+          </TouchableOpacity>
         )}
       </View>
 
       {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>12</Text>
-          <Text style={styles.statLabel}>Toplam Bağış</Text>
+          <Text style={styles.statNumber}>{stats.totalDonations}</Text>
+          <Text style={styles.statLabel}>{t('profile.stats.totalDonations')}</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>₺8,500</Text>
-          <Text style={styles.statLabel}>Toplam Tutar</Text>
+          <Text style={styles.statNumber}>₺{stats.totalAmount.toLocaleString()}</Text>
+          <Text style={styles.statLabel}>{t('profile.stats.totalAmount')}</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>3</Text>
-          <Text style={styles.statLabel}>Aktif Kampanya</Text>
+          <Text style={styles.statNumber}>{stats.activeCampaigns}</Text>
+          <Text style={styles.statLabel}>{t('profile.stats.activeCampaigns')}</Text>
         </View>
       </View>
 
@@ -195,9 +279,21 @@ export default function ProfileScreen() {
       </View>
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton}>
+      <TouchableOpacity 
+        style={styles.logoutButton}
+        onPress={() => {
+          Alert.alert(
+            t('profile.logout'),
+            t('profile.logoutConfirm'),
+            [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('profile.logout'), style: 'destructive', onPress: logout }
+            ]
+          );
+        }}
+      >
         <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-        <Text style={styles.logoutButtonText}>Çıkış Yap</Text>
+        <Text style={styles.logoutButtonText}>{t('profile.logout')}</Text>
       </TouchableOpacity>
 
       <View style={styles.bottomSpacer} />
@@ -213,38 +309,52 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     paddingTop: 40,
+    borderBottomWidth: tokens.stroke.width,
+    borderColor: colors.border,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
+    fontFamily: font.extrabold,
     color: '#111827',
     marginBottom: 8,
   },
   headerSubtitle: {
     fontSize: 16,
+    fontFamily: font.regular,
     color: '#6b7280',
   },
   profileCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     margin: 20,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderRadius: tokens.radii.lg,
+    padding: 24,
+    borderWidth: tokens.stroke.width,
+    borderColor: colors.border,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  avatarContainer: {
+  avatarSection: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 20,
+  },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -254,45 +364,52 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
     backgroundColor: '#3b82f6',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'white',
   },
   profileInfo: {
-    alignItems: 'center',
+    flex: 1,
   },
   profileName: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: font.extrabold,
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   profileEmail: {
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: font.regular,
     color: '#6b7280',
     marginBottom: 4,
   },
   profilePhone: {
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: font.regular,
     color: '#6b7280',
-    marginBottom: 16,
   },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#eff6ff',
-    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   editButtonText: {
     color: '#3b82f6',
     fontWeight: '600',
+    fontFamily: font.semibold,
+    fontSize: 15,
   },
   editForm: {
     width: '100%',
@@ -307,17 +424,19 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    fontFamily: font.semibold,
     color: '#374151',
     marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: tokens.radii.sm,
     padding: 12,
     fontSize: 16,
-    backgroundColor: 'white',
+    fontFamily: font.semibold,
+    backgroundColor: colors.surface,
   },
   editButtons: {
     flexDirection: 'row',
@@ -352,46 +471,59 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 24,
+    gap: 12,
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'white',
-    padding: 16,
-    marginHorizontal: 4,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: 20,
+    borderRadius: tokens.radii.lg,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderWidth: tokens.stroke.width,
+    borderColor: colors.border,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   statNumber: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: font.bold,
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
+    fontFamily: font.regular,
     color: '#6b7280',
     textAlign: 'center',
+    fontWeight: '500',
   },
   menuContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.surface,
     margin: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderRadius: tokens.radii.lg,
+    borderWidth: tokens.stroke.width,
+    borderColor: colors.border,
     overflow: 'hidden',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    padding: 18,
+    borderBottomWidth: tokens.stroke.width,
+    borderBottomColor: colors.border,
   },
   menuIcon: {
-    width: 40,
+    width: 44,
     alignItems: 'center',
     marginRight: 16,
   },
@@ -401,11 +533,13 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: font.semibold,
     color: '#111827',
     marginBottom: 4,
   },
   menuSubtitle: {
     fontSize: 14,
+    fontFamily: font.regular,
     color: '#6b7280',
   },
   logoutButton: {
@@ -413,19 +547,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'white',
+    backgroundColor: '#FEF2F2',
     margin: 20,
     padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#fee2e2',
+    borderRadius: tokens.radii.lg,
+    borderWidth: tokens.stroke.width,
+    borderColor: colors.border,
   },
   logoutButtonText: {
     color: '#ef4444',
-    fontWeight: '600',
+    fontWeight: '800',
+    fontFamily: font.bold,
     fontSize: 16,
   },
   bottomSpacer: {
     height: 40,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontFamily: font.regular,
   },
 });

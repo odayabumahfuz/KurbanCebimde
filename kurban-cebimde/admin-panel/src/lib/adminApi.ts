@@ -1,31 +1,32 @@
 // Admin API client
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-const ADMIN_API_PREFIX = '/api/admin/v1';
+// Tek otorite: VITE_API_BASE environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE as string;
+const ADMIN_API_PREFIX = '/admin/v1';
+
+// API base URL kontrolü
+if (!API_BASE_URL || !/^https?:\/\//.test(API_BASE_URL)) {
+  throw new Error('VITE_API_BASE mutlaka mutlak bir URL olmalı (http/https ile).');
+}
+
+console.log('🔧 API_BASE_URL:', API_BASE_URL);
+console.log('🔧 VITE_PROXY:', import.meta.env.VITE_PROXY);
 
 export interface AdminLoginRequest {
-  username: string;
+  phoneOrEmail: string;
   password: string;
   otp_code?: string;
 }
 
 export interface AdminLoginResponse {
   access_token: string;
-  refresh_token: string;
   token_type: string;
-  expires_in: number;
-  user: {
+  user?: {
     id: string;
     name: string;
     surname: string;
     email: string;
     phone: string;
-    roles: Array<{
-      id: string;
-      name: string;
-      description?: string;
-      permissions: string[];
-    }>;
-    permissions: string[];
+    role: string;
   };
 }
 
@@ -106,43 +107,98 @@ export interface DashboardData {
 class AdminApiClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
+  private adminPanelActive: boolean | null = null;
 
   constructor() {
     // Local storage'dan token'ları yükle
     this.accessToken = localStorage.getItem('admin_access_token');
     this.refreshToken = localStorage.getItem('admin_refresh_token');
+    
+    // Admin panel durumunu kontrol et
+    this.checkAdminPanelStatus();
+    
+    // GEÇİCİ ÇÖZÜM: Token yoksa otomatik olarak ekle
+    if (!this.accessToken) {
+      console.log('🔧 Token yok, otomatik olarak ekleniyor...');
+      // Hardcoded token kaldırıldı - gerçek login gerekli
+      console.log('⚠️ Token yok! Lütfen login yapın.');
+    }
+    
+    console.log('🔧 AdminApi constructor:');
+    console.log('  - accessToken yüklendi:', !!this.accessToken);
+    console.log('  - refreshToken yüklendi:', !!this.refreshToken);
+    console.log('  - localStorage admin_access_token:', localStorage.getItem('admin_access_token') ? 'var' : 'yok');
+  }
+
+  private async checkAdminPanelStatus(): Promise<void> {
+    try {
+      console.log('🔍 Admin panel durumu kontrol ediliyor...');
+      const response = await fetch('/admin/', { 
+        method: 'HEAD',
+        timeout: 3000 // 3 saniye timeout
+      } as any);
+      
+      this.adminPanelActive = response.ok;
+      console.log('📊 Admin panel durumu:', this.adminPanelActive ? '✅ Aktif' : '❌ Pasif');
+    } catch (error) {
+      console.log('⚠️ Admin panel kontrolü başarısız, backend kullanılacak:', error);
+      this.adminPanelActive = false;
+    }
+  }
+
+  private getApiBaseUrl(): string {
+    // VITE_API_BASE'i direkt kullan, proxy kontrolü yapma
+    console.log('🎯 API Base URL kullanılıyor:', API_BASE_URL);
+    return API_BASE_URL;
   }
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${API_BASE_URL}${ADMIN_API_PREFIX}${endpoint}`;
-    console.log('API request yapılıyor:', url, options);
+    // Login endpoint'i için token kontrolü yapma
+    if (endpoint === '/auth/login' || endpoint === '/auth/refresh') {
+      console.log('🔐 Login/Refresh endpoint, token kontrolü atlanıyor');
+    } else if (!this.accessToken) {
+      console.log('🚫 Token yok! API çağrısı engellendi:', endpoint);
+      throw new Error('No authentication token available');
+    }
+
+    const baseUrl = this.getApiBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
+    console.log('🚀 API request yapılıyor:', url);
+    console.log('  - Method:', options.method || 'GET');
+    console.log('  - Headers:', options.headers);
     
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
     if (this.accessToken) {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
+      console.log('  - Authorization header eklendi');
+    } else {
+      console.log('  - ⚠️ Authorization header yok!');
     }
 
     try {
-      console.log('Fetch çağrısı yapılıyor...');
+      console.log('📡 Fetch çağrısı yapılıyor...');
       const response = await fetch(url, {
         ...options,
         headers,
       });
       
-      console.log('Response status:', response.status);
+      console.log('📥 Response status:', response.status);
+      console.log('  - Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (response.status === 401) {
+        console.log('🔐 401 Unauthorized - token refresh deneniyor...');
         // Token expired, refresh deneyelim
         if (this.refreshToken) {
           const refreshed = await this.refreshAccessToken();
           if (refreshed) {
+            console.log('✅ Token refresh başarılı, request tekrarlanıyor...');
             // Retry with new token
             headers['Authorization'] = `Bearer ${this.accessToken}`;
             const retryResponse = await fetch(url, {
@@ -157,24 +213,28 @@ class AdminApiClient {
         }
         
         // Refresh failed, logout
+        console.log('❌ Token refresh başarısız, logout yapılıyor...');
         this.logout();
         throw new Error('Authentication failed');
       }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('❌ HTTP error:', response.status, errorData);
         throw new Error(errorData.detail || `HTTP ${response.status}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('✅ Response data alındı:', data);
+      return data;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('❌ API request failed:', error);
       throw error;
     }
   }
 
   async login(credentials: AdminLoginRequest): Promise<AdminLoginResponse> {
-    console.log('API login çağrısı yapılıyor...', credentials);
+    console.log('🔐 API login çağrısı yapılıyor...', credentials);
     
     try {
       const response = await this.request<AdminLoginResponse>('/auth/login', {
@@ -182,27 +242,34 @@ class AdminApiClient {
         body: JSON.stringify(credentials),
       });
 
-      console.log('API response alındı:', response);
+      console.log('✅ API response alındı:', response);
 
       // Token'ları kaydet
       this.accessToken = response.access_token;
-      this.refreshToken = response.refresh_token;
+      this.refreshToken = response.access_token; // Backend'de refresh token yok, access token'ı kullan
       localStorage.setItem('admin_access_token', response.access_token);
-      localStorage.setItem('admin_refresh_token', response.refresh_token);
+      localStorage.setItem('admin_refresh_token', response.access_token);
 
-      console.log('Token\'lar kaydedildi');
+      console.log('✅ Token\'lar kaydedildi');
+      console.log('  - accessToken:', this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'null');
+      console.log('  - refreshToken:', this.refreshToken ? this.refreshToken.substring(0, 20) + '...' : 'null');
       return response;
     } catch (error) {
-      console.error('API login hatası:', error);
+      console.error('❌ API login hatası:', error);
       throw error;
     }
   }
 
   async refreshAccessToken(): Promise<boolean> {
-    if (!this.refreshToken) return false;
+    if (!this.refreshToken) {
+      console.log('❌ Refresh token yok!');
+      return false;
+    }
 
     try {
-      const response = await fetch(`${API_BASE_URL}${ADMIN_API_PREFIX}/auth/refresh`, {
+      console.log('🔄 Token refresh deneniyor...');
+      const baseUrl = this.getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,10 +281,13 @@ class AdminApiClient {
         const data = await response.json();
         this.accessToken = data.access_token;
         localStorage.setItem('admin_access_token', data.access_token);
+        console.log('✅ Token refresh başarılı');
         return true;
+      } else {
+        console.log('❌ Token refresh başarısız:', response.status);
       }
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error('❌ Token refresh failed:', error);
     }
 
     return false;
@@ -226,21 +296,25 @@ class AdminApiClient {
   async logout(): Promise<void> {
     try {
       if (this.accessToken) {
+        console.log('🚪 Logout API çağrısı yapılıyor...');
         await this.request('/auth/logout', { method: 'POST' });
       }
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('❌ Logout failed:', error);
     } finally {
       // Token'ları temizle
+      console.log('🧹 Token\'lar temizleniyor...');
       this.accessToken = null;
       this.refreshToken = null;
       localStorage.removeItem('admin_access_token');
       localStorage.removeItem('admin_refresh_token');
+      console.log('✅ Logout tamamlandı');
     }
   }
 
   // YENİ: Metrics Summary endpoint
   async getMetricsSummary(): Promise<MetricsSummary> {
+    console.log('📊 Metrics summary alınıyor...');
     return this.request<MetricsSummary>('/metrics/summary');
   }
 
@@ -250,17 +324,21 @@ class AdminApiClient {
     page?: number;
     size?: number;
   } = {}): Promise<UsersResponse> {
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        searchParams.append(key, String(value));
-      }
-    });
+    try {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, String(value));
+        }
+      });
 
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/users?${queryString}` : '/users';
-    
-    return this.request<UsersResponse>(endpoint);
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `/users?${queryString}` : '/users';
+      
+      return this.request<UsersResponse>(endpoint);
+    } catch (error) {
+      throw error;
+    }
   }
 
   // YENİ: Donations endpoint (yeni format)
@@ -270,18 +348,22 @@ class AdminApiClient {
     status?: string;
     page?: number;
     size?: number;
-  } = {}): Promise<DonationsResponse> {
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        searchParams.append(key, String(value));
-      }
-    });
+  } = {}): Promise<any> {
+    try {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, String(value));
+        }
+      });
 
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/donations?${queryString}` : '/donations';
-    
-    return this.request<DonationsResponse>(endpoint);
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `/donations?${queryString}` : '/donations';
+      
+      return this.request<DonationsResponse>(endpoint);
+    } catch (error) {
+      throw error;
+    }
   }
 
   // Dashboard endpoints (eski format - geriye uyumluluk)
@@ -324,12 +406,16 @@ class AdminApiClient {
     email: string;
     phone: string;
     password: string;
-    roles: string[];
+    role: string;
   }) {
-    return this.request('/users', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
+    try {
+      return this.request('/users', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 
   async updateUser(userId: string, userData: Partial<{
@@ -348,6 +434,12 @@ class AdminApiClient {
   async deleteUser(userId: string) {
     return this.request(`/users/${userId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async toggleUserStatus(userId: string) {
+    return this.request(`/users/${userId}/toggle-status`, {
+      method: 'POST',
     });
   }
 
@@ -387,17 +479,21 @@ class AdminApiClient {
     status?: string;
     user_id?: string;
   } = {}) {
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        searchParams.append(key, String(value));
-      }
-    });
+    try {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, String(value));
+        }
+      });
 
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/carts?${queryString}` : '/carts';
-    
-    return this.request(endpoint);
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `/carts?${queryString}` : '/carts';
+      
+      return this.request(endpoint);
+    } catch (error) {
+      throw error;
+    }
   }
 
   async getCart(cartId: string) {
@@ -418,7 +514,9 @@ class AdminApiClient {
     status?: string;
     date_from?: string;
     date_to?: string;
+    search?: string;
   } = {}) {
+    // Backend'den stream listesi al
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -429,21 +527,86 @@ class AdminApiClient {
     const queryString = searchParams.toString();
     const endpoint = queryString ? `/streams?${queryString}` : '/streams';
     
-    return this.request(endpoint);
+    try {
+      return this.request(endpoint, {
+        method: 'GET',
+      });
+    } catch (error) {
+      console.error('Stream listesi alınamadı:', error);
+      throw error;
+    }
   }
 
-  async startStream(orderId: string, notes?: string) {
-    return this.request('/streams/start', {
+  async startStream(streamId: string) {
+    return this.request(`/streams/${streamId}/start`, {
       method: 'POST',
-      body: JSON.stringify({ order_id: orderId, notes }),
     });
   }
 
-  async stopStream(streamId: string, notes?: string) {
-    return this.request('/streams/stop', {
+  async stopStream(streamId: string) {
+    return this.request(`/streams/${streamId}/stop`, {
       method: 'POST',
-      body: JSON.stringify({ stream_id: streamId, notes }),
     });
+  }
+
+  // YENİ: Stats endpoint
+  async getStats(): Promise<any> {
+    try {
+      return await this.request('/stats');
+    } catch (error) {
+      console.error('Stats alınamadı:', error);
+      // Fallback data
+      return {
+        data: {
+          totalDonations: 0,
+          activeStreams: 0,
+          totalUsers: 0
+        }
+      };
+    }
+  }
+
+  // Donation stats endpoint (alias for getStats)
+  async getDonationStats(): Promise<any> {
+    return this.getStats();
+  }
+
+  // --- New Live admin endpoints (aligned with spec) ---
+  async createLive(payload: { kurban_id: string; scheduled_at?: string; quality_profile?: 'low'|'standard'|'high'; auto_record?: boolean; channel?: string }) {
+    return this.request(`${ADMIN_API_PREFIX.replace('/api/admin/v1','')}/admin/live`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async startLive(id: string) {
+    return this.request(`${ADMIN_API_PREFIX.replace('/api/admin/v1','')}/admin/live/${id}/start`, { method: 'POST' });
+  }
+
+  async stopLive(id: string) {
+    return this.request(`${ADMIN_API_PREFIX.replace('/api/admin/v1','')}/admin/live/${id}/stop`, { method: 'POST' });
+  }
+
+  async recordingLive(id: string, action: 'start'|'stop') {
+    return this.request(`${ADMIN_API_PREFIX.replace('/api/admin/v1','')}/admin/live/${id}/recording/${action}`, { method: 'POST' });
+  }
+
+  async notifyLive(id: string, payload?: { template_id?: string; targets?: string[] }) {
+    return this.request(`${ADMIN_API_PREFIX.replace('/api/admin/v1','')}/admin/live/${id}/notify`, {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+  }
+
+  async getLiveList(params: { status?: string; kurban_id?: string; admin_id?: string; q?: string; page?: number } = {}) {
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v])=>{ if(v!==undefined) sp.append(k, String(v)) });
+    const qs = sp.toString();
+    return this.request(`${ADMIN_API_PREFIX.replace('/api/admin/v1','')}/admin/live${qs?`?${qs}`:''}`);
+  }
+
+  async getLiveDetail(id: string) {
+    return this.request(`${ADMIN_API_PREFIX.replace('/api/admin/v1','')}/admin/live/${id}`);
   }
 
   // Certificate endpoints
@@ -483,7 +646,30 @@ class AdminApiClient {
 
   // Utility methods
   isAuthenticated(): boolean {
-    return !!this.accessToken;
+    console.log('🔍 Admin authentication kontrolü:');
+    console.log('  - accessToken var mı:', !!this.accessToken);
+    console.log('  - accessToken değeri:', this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'null');
+    console.log('  - localStorage token:', localStorage.getItem('admin_access_token') ? 'var' : 'yok');
+    
+    // Token varsa ama localStorage'da yoksa, localStorage'dan yükle
+    if (!this.accessToken) {
+      const storedToken = localStorage.getItem('admin_access_token');
+      if (storedToken) {
+        console.log('🔄 Token localStorage\'dan yükleniyor...');
+        this.accessToken = storedToken;
+        return true;
+      }
+    }
+    
+    // GEÇİCİ ÇÖZÜM: Token yoksa streams sayfasına git ama API çağrılarını engelle
+    if (!this.accessToken) {
+      console.log('⚠️ Token yok! Login sayfasına yönlendirilecek...');
+      return false; // Login sayfasına yönlendir
+    }
+    
+    const isAuth = !!this.accessToken;
+    console.log('  - Sonuç:', isAuth ? '✅ Authenticated' : '❌ Not authenticated');
+    return isAuth;
   }
 
   getAccessToken(): string | null {
@@ -505,14 +691,35 @@ class AdminApiClient {
 // Singleton instance
 export const adminApi = new AdminApiClient();
 
-// Export types
-export type { 
-  AdminLoginRequest, 
-  AdminLoginResponse, 
-  DashboardData,
-  MetricsSummary,
-  UserSummary,
-  UsersResponse,
-  DonationSummary,
-  DonationsResponse
+// Types are already exported above
+
+// Streams management endpoints - using public methods
+export const streamsAPI = {
+  // Get all streams (admin)
+  getStreams: async (params = {}) => {
+    return adminApi.getStreams(params);
+  },
+  
+  // Get specific stream (admin)
+  getStream: async (streamId: string) => {
+    return adminApi.getStreams({ streamId });
+  },
+  
+  // Create stream (admin)
+  createStream: async (streamData: { title: string; description?: string; donation_id?: string; duration_seconds?: number }) => {
+    return adminApi.request('/streams/create', {
+      method: 'POST',
+      body: JSON.stringify(streamData),
+    });
+  },
+  
+  // Start stream (admin)
+  startStream: async (streamId: string) => {
+    return adminApi.startStream(streamId);
+  },
+  
+  // Stop stream (admin)
+  stopStream: async (streamId: string) => {
+    return adminApi.stopStream(streamId);
+  }
 };

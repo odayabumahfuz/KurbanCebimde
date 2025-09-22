@@ -1,15 +1,34 @@
-import { useState } from 'react'
-import { BarChart3, Plus, Download, Eye, Edit, Trash2, Filter, Search, Calendar, FileText, TrendingUp, Users, DollarSign, MapPin } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Download, Edit, Trash2, Search, Calendar, FileText, TrendingUp, Users, DollarSign } from 'lucide-react'
+import Layout from '../components/Layout'
 
 export default function ReportsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState('all')
   const [selectedRegion, setSelectedRegion] = useState('all')
-  const [dateRange, setDateRange] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [reports, setReports] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Mock reports data
-  const reports = [
+  useEffect(() => {
+    fetchReports()
+  }, [])
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true)
+      // Gerçek API'den rapor verilerini çek
+      // TODO: Reports endpoint'i eklendiğinde buraya gerçek API çağrısı yapılacak
+      setReports([])
+    } catch (error) {
+      console.error('Rapor verileri yüklenemedi:', error)
+      setReports([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const reportsData = [
     {
       id: 1,
       title: 'Somali Büyükbaş Dağıtım Raporu',
@@ -120,7 +139,7 @@ export default function ReportsPage() {
     return configs[priority as keyof typeof configs] || configs.medium
   }
 
-  const filteredReports = reports.filter(report => {
+  const filteredReports = reportsData.filter(report => {
     if (selectedType !== 'all' && report.type !== selectedType) return false
     if (selectedRegion !== 'all' && report.region !== selectedRegion) return false
     if (searchTerm && !report.title.toLowerCase().includes(searchTerm.toLowerCase())) return false
@@ -149,354 +168,201 @@ export default function ReportsPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '2rem'
-      }}>
-        <div>
-          <h1 style={{
-            fontSize: '1.875rem',
-            fontWeight: '700',
-            color: '#111827',
-            margin: 0
-          }}>Raporlar</h1>
-          <p style={{
-            color: '#6b7280',
-            margin: '0.5rem 0 0 0'
-          }}>
-            Tüm raporları görüntüleyin, yönetin ve analiz edin
-          </p>
+    <Layout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="bg-zinc-900 rounded-lg p-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-white mb-1">
+                Raporlar
+              </h1>
+              <p className="text-zinc-400">
+                Tüm raporları görüntüleyin, yönetin ve analiz edin
+              </p>
+            </div>
+            
+            <button
+              onClick={handleCreateReport}
+              className="btn-success flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Yeni Rapor
+            </button>
+          </div>
         </div>
-        
-        <button
-          onClick={handleCreateReport}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            padding: '0.75rem 1.5rem',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-        >
-          <Plus size={20} />
-          Yeni Rapor
-        </button>
-      </div>
 
-      {/* Stats Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '1rem',
-        marginBottom: '2rem'
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#10b981' }}>
-            {reports.filter(r => r.type === 'distribution').length}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-green-600 mb-2">
+              {reportsData.filter(r => r.type === 'distribution').length}
+            </div>
+            <div className="text-sm text-zinc-600">Dağıtım Raporları</div>
           </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Dağıtım Raporları</div>
-        </div>
-        
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#ef4444' }}>
-            {reports.filter(r => r.type === 'slaughter').length}
+          
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-red-500 mb-2">
+              {reportsData.filter(r => r.type === 'slaughter').length}
+            </div>
+            <div className="text-sm text-zinc-600">Kesim Raporları</div>
           </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Kesim Raporları</div>
-        </div>
-        
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#f59e0b' }}>
-            {reports.filter(r => r.type === 'financial').length}
+          
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-amber-500 mb-2">
+              {reportsData.filter(r => r.type === 'financial').length}
+            </div>
+            <div className="text-sm text-zinc-600">Finansal Raporlar</div>
           </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Finansal Raporlar</div>
-        </div>
-        
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#8b5cf6' }}>
-            {reports.filter(r => r.type === 'audit').length}
+          
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-purple-500 mb-2">
+              {reportsData.filter(r => r.type === 'audit').length}
+            </div>
+            <div className="text-sm text-zinc-600">Denetim Raporları</div>
           </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Denetim Raporları</div>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '2rem',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ flex: '1', minWidth: '300px' }}>
-          <div style={{ position: 'relative' }}>
-            <Search style={{ 
-              position: 'absolute', 
-              left: '12px', 
-              top: '50%', 
-              transform: 'translateY(-50%)', 
-              color: '#9ca3af',
-              width: '20px',
-              height: '20px'
-            }} />
-            <input
-              type="text"
-              placeholder="Rapor ara..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem'
-              }}
-            />
+        {/* Filters */}
+        <div className="card">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Rapor ara..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-field pl-10"
+                />
+              </div>
+            </div>
+          
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="input-field min-w-[150px]"
+            >
+              <option value="all">Tüm Türler</option>
+              <option value="distribution">Dağıtım</option>
+              <option value="slaughter">Kesim</option>
+              <option value="financial">Finansal</option>
+              <option value="audit">Denetim</option>
+              <option value="monthly">Aylık</option>
+            </select>
+            
+            <select
+              value={selectedRegion}
+              onChange={(e) => setSelectedRegion(e.target.value)}
+              className="input-field min-w-[150px]"
+            >
+              <option value="all">Tüm Bölgeler</option>
+              <option value="Türkiye">Türkiye</option>
+              <option value="Somali">Somali</option>
+              <option value="Pakistan">Pakistan</option>
+              <option value="Bangladeş">Bangladeş</option>
+              <option value="Genel">Genel</option>
+            </select>
           </div>
         </div>
-        
-        <select
-          value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value)}
-          style={{
-            padding: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.5rem',
-            fontSize: '0.875rem',
-            backgroundColor: 'white',
-            minWidth: '150px'
-          }}
-        >
-          <option value="all">Tüm Türler</option>
-          <option value="distribution">Dağıtım</option>
-          <option value="slaughter">Kesim</option>
-          <option value="financial">Finansal</option>
-          <option value="audit">Denetim</option>
-          <option value="monthly">Aylık</option>
-        </select>
-        
-        <select
-          value={selectedRegion}
-          onChange={(e) => setSelectedRegion(e.target.value)}
-          style={{
-            padding: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.5rem',
-            fontSize: '0.875rem',
-            backgroundColor: 'white',
-            minWidth: '150px'
-          }}
-        >
-          <option value="all">Tüm Bölgeler</option>
-          <option value="Türkiye">Türkiye</option>
-          <option value="Somali">Somali</option>
-          <option value="Pakistan">Pakistan</option>
-          <option value="Bangladeş">Bangladeş</option>
-          <option value="Genel">Genel</option>
-        </select>
-      </div>
 
-      {/* Reports Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-        gap: '1.5rem'
-      }}>
+        {/* Reports Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredReports.map(report => {
           const typeConfig = getTypeConfig(report.type)
           const priorityConfig = getPriorityConfig(report.priority)
           
           return (
-            <div key={report.id} style={{
-              backgroundColor: 'white',
-              borderRadius: '0.75rem',
-              border: '1px solid #e5e7eb',
-              overflow: 'hidden',
-              transition: 'all 0.2s'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-              e.currentTarget.style.transform = 'translateY(-2px)'
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.boxShadow = 'none'
-              e.currentTarget.style.transform = 'translateY(0)'
-            }}
+            <div 
+              key={report.id} 
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1"
             >
               {/* Header */}
-              <div style={{
-                padding: '1.5rem',
-                borderBottom: '1px solid #f3f4f6'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  marginBottom: '1rem'
-                }}>
-                  <div style={{ flex: '1' }}>
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '600',
-                      color: '#111827',
-                      margin: '0 0 0.5rem 0',
-                      lineHeight: '1.4'
-                    }}>
-                      {report.title}
-                    </h3>
-                    <p style={{
-                      color: '#6b7280',
-                      fontSize: '0.875rem',
-                      margin: 0,
-                      lineHeight: '1.5'
-                    }}>
-                      {report.summary}
-                    </p>
-                  </div>
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
+                    {report.title}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                    {report.summary}
+                  </p>
                 </div>
                 
-                <div style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  flexWrap: 'wrap'
-                }}>
-                  <span style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    backgroundColor: typeConfig.bgColor,
-                    color: typeConfig.color,
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '500'
-                  }}>
+                <div className="flex gap-2 flex-wrap">
+                  <span 
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
+                    style={{
+                      backgroundColor: typeConfig.bgColor,
+                      color: typeConfig.color
+                    }}
+                  >
                     <typeConfig.icon size={12} />
                     {typeConfig.label}
                   </span>
                   
-                  <span style={{
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '500'
-                  }}>
+                  <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-xs font-medium">
                     {report.region}
                   </span>
                   
-                  <span style={{
-                    backgroundColor: priorityConfig.color + '20',
-                    color: priorityConfig.color,
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '500'
-                  }}>
+                  <span 
+                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
+                    style={{
+                      backgroundColor: priorityConfig.color + '20',
+                      color: priorityConfig.color
+                    }}
+                  >
                     {priorityConfig.label}
                   </span>
                 </div>
               </div>
               
               {/* Content */}
-              <div style={{ padding: '1.5rem' }}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '1rem',
-                  marginBottom: '1.5rem'
-                }}>
+              <div className="p-6">
+                <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       Tarih
                     </div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {report.date}
                     </div>
                   </div>
                   
                   <div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       Boyut
                     </div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {report.size}
                     </div>
                   </div>
                   
                   <div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       İndirilme
                     </div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {report.downloads} kez
                     </div>
                   </div>
                   
                   <div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       Yazar
                     </div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '500' }}>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {report.author}
                     </div>
                   </div>
                 </div>
                 
                 {/* Tags */}
-                <div style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  flexWrap: 'wrap',
-                  marginBottom: '1.5rem'
-                }}>
+                <div className="flex gap-2 flex-wrap mb-6">
                   {report.tags.map((tag, index) => (
                     <span
                       key={index}
-                      style={{
-                        backgroundColor: '#f3f4f6',
-                        color: '#374151',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        fontWeight: '500'
-                      }}
+                      className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-xs font-medium"
                     >
                       {tag}
                     </span>
@@ -504,26 +370,10 @@ export default function ReportsPage() {
                 </div>
                 
                 {/* Actions */}
-                <div style={{
-                  display: 'flex',
-                  gap: '0.5rem'
-                }}>
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleDownloadReport(report.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      padding: '0.5rem 0.75rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      flex: 1
-                    }}
+                    className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors flex-1 justify-center"
                   >
                     <Download size={14} />
                     İndir
@@ -531,19 +381,7 @@ export default function ReportsPage() {
                   
                   <button
                     onClick={() => handleEditReport(report.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      backgroundColor: '#f59e0b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      padding: '0.5rem 0.75rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
+                    className="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors"
                   >
                     <Edit size={14} />
                     Düzenle
@@ -551,19 +389,7 @@ export default function ReportsPage() {
                   
                   <button
                     onClick={() => handleDeleteReport(report.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      padding: '0.5rem 0.75rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
+                    className="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors"
                   >
                     <Trash2 size={14} />
                     Sil
@@ -575,81 +401,33 @@ export default function ReportsPage() {
         })}
       </div>
 
-      {/* Create Report Modal */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '0.75rem',
-            padding: '2rem',
-            width: '90%',
-            maxWidth: '600px',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1.5rem'
-            }}>
-              <h2 style={{
-                fontSize: '1.5rem',
-                fontWeight: '600',
-                color: '#111827',
-                margin: 0
-              }}>
-                Yeni Rapor Oluştur
-              </h2>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#6b7280'
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Rapor Başlığı
-                </label>
-                <input
-                  type="text"
-                  placeholder="Rapor başlığını girin"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    outline: 'none'
-                  }}
-                />
+        {/* Create Report Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  Yeni Rapor Oluştur
+                </h2>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none"
+                >
+                  ×
+                </button>
               </div>
+
+              <form className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Rapor Başlığı
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Rapor başlığını girin"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
 
               <div>
                 <label style={{
@@ -824,6 +602,7 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </Layout>
   )
 }

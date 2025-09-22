@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { colors } from '../theme/colors';
+import { tokens } from '../theme/tokens';
 
 export default function DonationProductCard({
   image,
@@ -98,29 +99,29 @@ export default function DonationProductCard({
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 10 },
+  card: { backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden', borderWidth: tokens.stroke.width, borderColor: colors.border, marginBottom: 12 },
   heroWrap: { position: 'relative' },
-  hero: { width: '100%', height: 130 },
-  heroBadge: { position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  hero: { width: '100%', height: 140 },
+  heroBadge: { position: 'absolute', left: 10, bottom: 10, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
   heroBadgeText: { color: '#fff', fontWeight: '800', fontSize: 11, letterSpacing: 1 },
-  field: { backgroundColor: '#F8FAFC', marginHorizontal: 8, marginTop: 6, borderRadius: 10, overflow: 'hidden', height: 36 },
-  pillRow: { paddingHorizontal: 8, paddingTop: 6, gap: 6 },
-  pill: { backgroundColor: '#F3F4F6', paddingHorizontal: 10, height: 30, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
-  pillActive: { backgroundColor: '#DCFCE7' },
-  pillText: { color: '#6B7280', fontSize: 12, fontWeight: '700' },
-  pillTextActive: { color: '#065F46' },
-  selectRow: { backgroundColor: '#F8FAFC', marginHorizontal: 8, marginTop: 6, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10 },
-  selectLabel: { fontWeight: '800', color: '#111827', fontSize: 13 },
-  dropdown: { backgroundColor: '#FFFFFF', marginHorizontal: 8, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginTop: 6 },
-  optionRow: { paddingVertical: 10, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  optionText: { color: '#111827', fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 8, marginTop: 6 },
-  inputWrap: { backgroundColor: '#F8FAFC', height: 36, borderRadius: 10, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center' },
-  input: { flex: 1, fontSize: 13, color: colors.text },
-  inputSuffix: { color: '#6B7280', fontWeight: '700', marginLeft: 6, fontSize: 12 },
-  readonly: { flex: 1, fontSize: 13, color: '#111827', fontWeight: '800' },
-  cta: { backgroundColor: '#EF4444', height: 38, alignItems: 'center', justifyContent: 'center', marginHorizontal: 8, marginVertical: 8, borderRadius: 20 },
-  ctaText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  field: { backgroundColor: '#F8FAFC', marginHorizontal: 10, marginTop: 8, borderRadius: 12, overflow: 'hidden', height: 38 },
+  pillRow: { paddingHorizontal: 10, paddingTop: 8, gap: 6 },
+  pill: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, height: 32, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  pillActive: { backgroundColor: '#EAD9D5' },
+  pillText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  pillTextActive: { color: colors.primary },
+  selectRow: { backgroundColor: '#FAFAFA', marginHorizontal: 10, marginTop: 8, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12, borderWidth: tokens.stroke.width, borderColor: colors.border },
+  selectLabel: { fontWeight: '800', color: colors.text, fontSize: 13 },
+  dropdown: { backgroundColor: '#FFFFFF', marginHorizontal: 10, borderRadius: 12, borderWidth: tokens.stroke.width, borderColor: colors.border, marginTop: 6 },
+  optionRow: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  optionText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 10, marginTop: 8 },
+  inputWrap: { backgroundColor: '#FAFAFA', height: 40, borderRadius: 12, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', borderWidth: tokens.stroke.width, borderColor: colors.border },
+  input: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
+  inputSuffix: { color: colors.textMuted, fontWeight: '800', marginLeft: 8, fontSize: 12 },
+  readonly: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '800' },
+  cta: { backgroundColor: colors.primary, height: 44, alignItems: 'center', justifyContent: 'center', marginHorizontal: 10, marginVertical: 10, borderRadius: 24, borderWidth: tokens.stroke.width, borderColor: colors.border },
+  ctaText: { color: '#fff', fontWeight: '800', fontSize: 14, letterSpacing: 0.3 },
 });
 
 

@@ -6,7 +6,8 @@ import Constants from 'expo-constants';
 const scriptURL = NativeModules.SourceCode?.scriptURL || '';
 const METRO_HOST = scriptURL.split('://')[1]?.split(':')[0];
 const EXPO_HOST = (Constants?.expoConfig?.hostUri || Constants?.manifest?.debuggerHost || '').split(':')[0];
-const EXPLICIT_BASE = process.env.EXPO_PUBLIC_API_BASE; // örn: http://192.168.1.107:8000
+const CONFIG_BASE = Constants?.expoConfig?.extra?.apiBase || Constants?.manifest?.extra?.apiBase || '';
+const EXPLICIT_BASE = process.env.EXPO_PUBLIC_API_BASE || CONFIG_BASE; // örn: http://192.168.1.107:8000
 
 const DEV_BASE = (() => {
   if (EXPLICIT_BASE) return EXPLICIT_BASE;
@@ -18,7 +19,7 @@ const DEV_BASE = (() => {
   return `http://${host || '127.0.0.1'}:8000`;
 })();
 
-const BASE = __DEV__ ? DEV_BASE : 'https://api.kurbancebimde.com';
+const BASE = __DEV__ ? 'http://185.149.103.247:8000' : 'https://api.kurbancebimde.com';
 
 console.log('🔗 API BASE =', `${BASE}/api/v1`);
 
@@ -26,6 +27,91 @@ export const api = axios.create({
   baseURL: `${BASE}/api/v1`,
   timeout: 60000 // 60 saniye timeout
 });
+
+// Admin API için ayrı instance
+export const adminApi = axios.create({
+  baseURL: `${BASE}/api/admin/v1`,
+  timeout: 60000
+});
+
+// Admin API metodları
+export const adminAPI = {
+  setToken: (token) => {
+    adminApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  },
+  getStreams: async (params = {}) => {
+    return adminApi.get('/streams', { params });
+  },
+  getDonations: async (params = {}) => {
+    return adminApi.get('/donations', { params });
+  }
+};
+
+// LiveKit API için ayrı instance - Backend'deki admin endpoint'ini kullan
+export const livekitAPI = axios.create({
+  baseURL: `${BASE}/api/admin/v1`,
+  timeout: 60000
+});
+
+// LiveKit API için request interceptor
+livekitAPI.interceptors.request.use(
+  async (config) => {
+    console.log(`🚀 LiveKit API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    
+    // Token varsa header'a ekle
+    try {
+      const token = await SecureStore.getItemAsync('access');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔑 LiveKit Token eklendi');
+      }
+    } catch (error) {
+      console.error('LiveKit Token alınamadı:', error);
+    }
+    
+    return config;
+  },
+  (error) => {
+    console.error('❌ LiveKit API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// LiveKit API için response interceptor
+livekitAPI.interceptors.response.use(
+  (response) => {
+    console.log(`✅ LiveKit API Response: ${response.status} ${response.config.url}`);
+    return response;
+  },
+  async (error) => {
+    console.error('❌ LiveKit API Response Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Admin API için request interceptor - KALDIRILDI (adminAPI.setToken() kullanılıyor)
+// adminApi.interceptors.request.use(
+//   async (config) => {
+//     console.log(`🚀 Admin API Request: ${config.method?.toUpperCase()} ${config.url}`);
+//     
+//     // Token varsa header'a ekle
+//     try {
+//       const token = await SecureStore.getItemAsync('access');
+//       if (token) {
+//         config.headers.Authorization = `Bearer ${token}`;
+//         console.log('🔑 Admin Token eklendi');
+//       }
+//     } catch (error) {
+//       console.error('Admin Token alınamadı:', error);
+//     }
+//     
+//     return config;
+//   },
+//   (error) => {
+//     console.error('❌ Admin API Request Error:', error);
+//     return Promise.reject(error);
+//   }
+// );
 
 // Request interceptor - her istekte token ekle
 api.interceptors.request.use(
@@ -83,6 +169,14 @@ api.interceptors.response.use(
     
     const status = error?.response?.status;
     if (status === 401) {
+      // Sonsuz döngüyü önle - sadece bir kez refresh dene
+      if (error.config._retry) {
+        console.log('❌ Refresh token zaten denenmiş, sonsuz döngü önlendi');
+        await SecureStore.deleteItemAsync('access');
+        await SecureStore.deleteItemAsync('refresh');
+        return Promise.reject(error);
+      }
+      
       try {
         const refresh = await SecureStore.getItemAsync('refresh');
         if (!refresh) throw error;
@@ -91,7 +185,8 @@ api.interceptors.response.use(
         const { data } = await api.post('/auth/refresh', { refresh_token: refresh });
         await SecureStore.setItemAsync('access', data.access_token);
         
-        // Orijinal isteği tekrarla
+        // Orijinal isteği tekrarla (retry flag'i ekle)
+        error.config._retry = true;
         error.config.headers.Authorization = `Bearer ${data.access_token}`;
         return api.request(error.config);
       } catch (refreshError) {
@@ -140,7 +235,7 @@ export const authAPI = {
   login: async (credentials) => {
     try {
       // Backend JSON bekliyor
-      let phone = credentials?.username || credentials?.phone || '';
+      let phone = credentials?.phone || '';
       
       // Telefon numarasını temizle (boşlukları kaldır)
       if (phone) {
@@ -148,7 +243,7 @@ export const authAPI = {
       }
       
       const payload = {
-        phone: phone,
+        phoneOrEmail: phone, // Backend'de phoneOrEmail field'ı bekliyor
         password: credentials?.password || ''
       };
 
@@ -235,28 +330,65 @@ export const ordersAPI = {
   }
 };
 
-// Admin endpoints - YENİ FORMAT
-export const adminAPI = {
-  // Eski endpoint (geriye uyumluluk)
-  getDashboardStats: async () => {
-    return api.get('/admin/dashboard');
+// Donations endpoints
+export const donationsAPI = {
+  createDonation: async (amount, currency = 'TRY') => {
+    return api.post('/donations', { amount, currency });
   },
   
-  // Yeni endpoint'ler
-  getMetricsSummary: async () => {
-    return api.get('/admin/metrics/summary');
+  getMyDonations: async (status = null) => {
+    const params = status ? { status } : {};
+    return api.get('/donations/me', { params });
   },
   
-  getUsers: async (params = {}) => {
-    return api.get('/admin/users', { params });
+  getDonation: async (donationId) => {
+    return api.get(`/donations/${donationId}`);
   },
   
-  getUser: async (id) => {
-    return api.get(`/admin/users/${id}`);
+  processPayment: async (donationId) => {
+    return api.post(`/donations/${donationId}/pay`);
+  }
+};
+
+
+// Live streaming endpoints
+export const streamsAPI = {
+  // Get all active streams (admin endpoint)
+  getStreams: async () => {
+    return adminApi.get('/streams');
   },
   
-  getDonations: async (params = {}) => {
-    return api.get('/admin/donations', { params });
+  // Get Agora token for stream
+  getStreamToken: async (streamId, role = 'audience') => {
+    return api.post(`/streams/${streamId}/token`, { role });
+  }
+};
+
+// Admin streams endpoints
+export const adminStreamsAPI = {
+  // Get all streams (admin)
+  getStreams: async (params = {}) => {
+    return api.get('/admin/streams', { params });
+  },
+  
+  // Get specific stream (admin)
+  getStream: async (streamId) => {
+    return api.get(`/admin/streams/${streamId}`);
+  },
+  
+  // Create stream (admin)
+  createStream: async (streamData) => {
+    return api.post('/admin/streams', streamData);
+  },
+  
+  // Start stream (admin)
+  startStream: async (streamId) => {
+    return api.post(`/admin/streams/${streamId}/start`);
+  },
+  
+  // Stop stream (admin)
+  stopStream: async (streamId) => {
+    return api.post(`/admin/streams/${streamId}/stop`);
   }
 };
 

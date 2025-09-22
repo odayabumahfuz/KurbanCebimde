@@ -11,46 +11,24 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import BgPattern from '../components/BgPattern';
 
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen({ navigation }) {
   const features = [
-    {
-      icon: 'heart',
-      color: '#22C55E',
-      text: 'Bağışlarınızı yönetme',
-    },
-    {
-      icon: 'gift',
-      color: '#3B82F6',
-      text: 'Yetimlere sponsor olma',
-    },
-    {
-      icon: 'moon',
-      color: '#F59E0B',
-      text: 'Kurban hisselerinizi yönetme',
-    },
-    {
-      icon: 'flash',
-      color: '#8B5CF6',
-      text: 'Hızlı ve kolay bağış yapma',
-    },
-    {
-      icon: 'help-circle',
-      color: '#EF4444',
-      text: 'Destek talebi oluşturma',
-    },
-    {
-      icon: 'checkmark-circle',
-      color: '#22C55E',
-      text: 'Otomatik bilgi doldurma',
-    },
+    { icon: 'heart-outline', color: colors.brand, text: 'Bağışlarınızı yönetme' },
+    { icon: 'gift-outline', color: '#2E3236', text: 'Yetimlere sponsor olma' },
+    { icon: 'pricetag-outline', color: colors.brand, text: 'Kurban hisselerinizi yönetme' },
+    { icon: 'flash-outline', color: '#2E3236', text: 'Hızlı ve kolay bağış yapma' },
+    { icon: 'home-outline', color: colors.brand, text: 'Destek talebi oluşturma' },
+    { icon: 'checkmark-circle-outline', color: '#2E3236', text: 'Otomatik bilgi doldurma' },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <BgPattern />
                  <View style={styles.content}>
            {/* Welcome Card */}
            <View style={styles.welcomeCard}>
@@ -72,8 +50,8 @@ export default function WelcomeScreen({ navigation }) {
             <View style={styles.featuresList}>
               {features.map((feature, index) => (
                 <View key={index} style={styles.featureRow}>
-                  <View style={[styles.featureIcon, { backgroundColor: feature.color }]}>
-                    <Ionicons name={feature.icon} size={20} color="#FFFFFF" />
+                  <View style={[styles.featureIcon, { backgroundColor: feature.color }]}> 
+                    <Ionicons name={feature.icon} size={18} color={feature.color === colors.brand ? '#FFFFFF' : '#FFFFFF'} />
                   </View>
                   <Text style={styles.featureText}>{feature.text}</Text>
                 </View>
@@ -152,9 +130,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,

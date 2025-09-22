@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore } from '../stores/authStore'
 import { Eye, EyeOff, User, Shield, Package, TrendingUp, Users, FileText, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Layout from '../components/Layout'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -57,16 +58,8 @@ export default function LoginPage() {
   ]
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '2rem 1rem',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+    <Layout>
+      <div className="p-6 space-y-6">
       {/* Background decoration */}
       <div style={{
         position: 'absolute',
@@ -355,13 +348,14 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.5; transform: scale(1); }
-          50% { opacity: 0.8; transform: scale(1.05); }
-        }
-      `}</style>
-    </div>
+        {/* CSS Animations */}
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+          }
+        `}</style>
+      </div>
+    </Layout>
   )
 }

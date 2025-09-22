@@ -93,7 +93,7 @@ export default function RegisterScreen({ navigation }) {
       const userData = {
         name: firstName.trim(),
         surname: lastName.trim(),
-        phone: cleanPhone, // Temizlenmiş telefon numarası
+        phone: `+90${cleanPhone}`, // Tam telefon numarası
         email: email.trim() || null, // E-posta opsiyonel
         password: password,
       };
@@ -207,14 +207,15 @@ export default function RegisterScreen({ navigation }) {
 
                   <View style={styles.inputWrapper}>
                     <Ionicons name="call-outline" size={24} color="#6B7280" />
+                    <Text style={styles.countryCodeText}>+90</Text>
                     <TextInput
                       style={styles.textInput}
                       placeholder="5XX XXX XX XX"
                       placeholderTextColor="#9CA3AF"
                       value={phone}
-                      onChangeText={(text) => setPhone(formatPhoneNumber(text))}
+                      onChangeText={(text) => setPhone(text.replace(/\D/g, ''))}
                       keyboardType="phone-pad"
-                      maxLength={15}
+                      maxLength={10}
                     />
                   </View>
 
@@ -314,6 +315,7 @@ export default function RegisterScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
     </SafeAreaView>
   );
 }
@@ -390,6 +392,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     width: '100%',
     marginBottom: 20,
+  },
+  countryCodeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginRight: 12,
   },
   inputWrapper: {
     flexDirection: 'row',

@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +18,11 @@
       "bundleIdentifier": "com.kurbancebimde.app",
       "supportsTablet": true,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Canlı yayın için kamera erişimi gereklidir.",
+        "NSMicrophoneUsageDescription": "Canlı yayın için mikrofon erişimi gereklidir.",
+        "NSBluetoothAlwaysUsageDescription": "Ses aygıtlarına bağlanmak için Bluetooth erişimi gereklidir.",
+        "NSBluetoothPeripheralUsageDescription": "Ses aygıtlarına bağlanmak için Bluetooth erişimi gereklidir."
       }
     },
     "android": {
@@ -26,7 +30,13 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
-      }
+    },
+    "permissions": [
+      "CAMERA",
+      "RECORD_AUDIO",
+      "MODIFY_AUDIO_SETTINGS",
+      "BLUETOOTH_CONNECT"
+    ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,9 +54,11 @@
             "newArchEnabled": false
           }
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "extra": {
+      "apiBase": "https://admin.kurbancebimde.com",
       "eas": {
         "projectId": "c0b4098a-5731-4190-805e-cb035c4bf4c9"
       }

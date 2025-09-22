@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, Alert } from 'react-native';
 import SectionHeader from '../components/SectionHeader';
 import DonateModal from '../components/DonateModal';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,9 @@ import { regions, animalMeta } from '../data/kurban';
 import AnimalCard from '../components/AnimalCard';
 import { getAnimalImage } from '../helpers/animalAssets';
 import DonationProductCard from '../components/DonationProductCard';
+import { donationsAPI } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 function RegionTab({ label, active, onPress }) {
   return (
@@ -18,13 +21,38 @@ function RegionTab({ label, active, onPress }) {
 
 export default function DonateScreen() {
   const [modal, setModal] = useState({ open: false, label: '', category: '', region: '', qty: 1, unitPrice: 0, intention: '' });
+  const [isLoading, setIsLoading] = useState(false);
   const listAnim = useRef(new Animated.Value(1)).current;
+  const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const animals = useMemo(() => {
     const union = new Set();
     regions.forEach(r => r.animals.forEach(a => union.add(a)));
     return Array.from(union); // tüm eklenen hayvanlar
   }, []);
+
+  const handleDonation = async (donationData) => {
+    if (!isAuthenticated) {
+      Alert.alert(t('auth.login'), t('auth.loginRequired'));
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await donationsAPI.createDonation(donationData.amount, 'TRY');
+      Alert.alert(
+        t('donation.donationSuccess'), 
+        `${t('donation.donationSuccess')}. ${t('donation.amount')}: ${donationData.amount} TL\n\n${t('donation.checkout')}`,
+        [{ text: t('common.ok'), onPress: () => setModal({ open: false, label: '', category: '', region: '', qty: 1, unitPrice: 0, intention: '' }) }]
+      );
+    } catch (error) {
+      console.error('Donation error:', error);
+      Alert.alert(t('common.error'), t('donation.donationError'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -43,7 +71,11 @@ export default function DonateScreen() {
               regionName={''}
               regionOptions={allowedRegions}
               defaultAmount={animalMeta[name]?.defaultAmount || 0}
-              onDonate={({ amount, qty, region, intention, image }) => setModal({ open: true, label: name, category: `${region || defaultRegion} - ${name}` , region: region || defaultRegion, qty, unitPrice: amount, intention: intention || '', image })}
+              onDonate={({ amount, qty, region, intention, image }) => {
+                const chosenRegion = region || defaultRegion;
+                const unitPrice = Number(amount || animalMeta[name]?.defaultAmount || 0);
+                setModal({ open: true, label: name, category: `${chosenRegion} - ${name}` , region: chosenRegion, qty: Number(qty || 1), unitPrice, intention: intention || '', image });
+              }}
               style={styles.cardItem}
             />
             );
@@ -60,6 +92,8 @@ export default function DonateScreen() {
         qty={modal.qty}
         unitPrice={modal.unitPrice}
         intention={modal.intention}
+        onDonate={handleDonation}
+        isLoading={isLoading}
       />
     </ScrollView>
   );

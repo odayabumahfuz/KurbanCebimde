@@ -6,11 +6,20 @@ export default function CheckoutScreen({ route, navigation }) {
   const { total = 0 } = route.params || {};
 
   function handleStartPayment() {
-    // Gerçek entegrasyonda: backend /orders -> /checkout çağrılıp dönen 3DS URL açılır
-    const mock3dsUrl = 'https://example.com/3ds/mock';
-    Linking.openURL(mock3dsUrl).catch(() => {
-      Alert.alert('Ödeme', '3D Secure sayfası açılamadı.');
-    });
+    // Test aşamasında: Ödeme sayfası atlanır, direkt başarı mesajı gösterilir
+    Alert.alert(
+      'Başarılı! 🎉',
+      'Bağışınız alındı. Teşekkür ederiz!',
+      [
+        {
+          text: 'Tamam',
+          onPress: () => {
+            // Ana sayfaya dön
+            navigation.navigate('Home');
+          }
+        }
+      ]
+    );
   }
 
   return (
@@ -20,7 +29,7 @@ export default function CheckoutScreen({ route, navigation }) {
       <Text style={styles.total}>₺ {Number(total).toLocaleString('tr-TR')}</Text>
 
       <TouchableOpacity style={styles.primaryBtn} onPress={handleStartPayment}>
-        <Text style={styles.primaryBtnText}>3D Secure Ödemeye Git</Text>
+        <Text style={styles.primaryBtnText}>Bağışı Onayla</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.goBack()}>

@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Image, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { liveAPI } from '../lib/liveAPI';
 
 const { width } = Dimensions.get('window');
 
 export default function LiveStreamsScreen({ navigation }) {
-  const [activeTab, setActiveTab] = useState('upcoming'); // upcoming, archive, my-streams
-  const [isLive, setIsLive] = useState(false);
-  const [currentStream, setCurrentStream] = useState(null);
+  const [activeTab, setActiveTab] = useState('upcoming'); // upcoming, archive
 
   // Mock canlı yayın verileri
   const upcomingStreams = [
@@ -23,6 +22,7 @@ export default function LiveStreamsScreen({ navigation }) {
       image: require('../../assets/kurbancebimdelogo.png'),
       rtmpKey: 'somali_buyukbas_001',
       liveUrl: 'https://stream.example.com/somali_buyukbas_001',
+      channel: 'kc_demo_somali_001',
       description: 'Somali bölgesinde büyükbaş kurban kesimi canlı yayını',
       organizer: 'Somali İnsani Yardım Vakfı',
       targetAmount: 5000,
@@ -40,6 +40,7 @@ export default function LiveStreamsScreen({ navigation }) {
       image: require('../../assets/kurbancebimdelogo.png'),
       rtmpKey: 'turkiye_koc_002',
       liveUrl: 'https://stream.example.com/turkiye_koc_002',
+      channel: 'kc_demo_tr_002',
       description: 'Türkiye\'de koç kurban kesimi canlı yayını',
       organizer: 'Türkiye Diyanet İşleri',
       targetAmount: 3000,
@@ -78,6 +79,7 @@ export default function LiveStreamsScreen({ navigation }) {
       viewers: 1250,
       duration: '2 saat 15 dakika',
       certificateCount: 45,
+      channel: 'kc_demo_tr_archive_001'
     },
     {
       id: '2',
@@ -91,6 +93,7 @@ export default function LiveStreamsScreen({ navigation }) {
       viewers: 2100,
       duration: '3 saat 45 dakika',
       certificateCount: 78,
+      channel: 'kc_demo_pk_archive_002'
     },
   ];
 
@@ -151,7 +154,7 @@ export default function LiveStreamsScreen({ navigation }) {
     );
   }
 
-  function ArchivedStreamCard({ stream }) {
+  function ArchivedStreamCard({ stream, onWatch }) {
     return (
       <View style={styles.streamCard}>
         <Image source={stream.image} style={styles.animalImage} />
@@ -179,7 +182,7 @@ export default function LiveStreamsScreen({ navigation }) {
           </View>
           
           <View style={styles.streamActions}>
-            <TouchableOpacity style={styles.primaryButton}>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => onWatch?.(stream)}>
               <Ionicons name="play-circle-outline" size={16} color={colors.surface} />
               <Text style={styles.primaryButtonText}>İzle</Text>
             </TouchableOpacity>
@@ -282,18 +285,7 @@ export default function LiveStreamsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Yayın Başlat Butonu */}
-      {activeTab === 'my-streams' && (
-        <View style={styles.createStreamContainer}>
-          <TouchableOpacity 
-            style={styles.createStreamButton}
-            onPress={() => Alert.alert('Yeni Yayın', 'Yeni yayın oluşturma yakında eklenecek!')}
-          >
-            <Ionicons name="add-circle" size={24} color={colors.surface} />
-            <Text style={styles.createStreamText}>Yeni Yayın Oluştur</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Admin-only kontroller mobilde gösterilmiyor */}
 
       {/* Content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -309,22 +301,21 @@ export default function LiveStreamsScreen({ navigation }) {
               <Text style={styles.emptySubtitle}>Yaklaşan kurban kesim yayınları burada görünecek</Text>
             </View>
           )
-        ) : activeTab === 'my-streams' ? (
-          myStreams.length > 0 ? (
-            myStreams.map(stream => (
-              <MyStreamCard key={stream.id} stream={stream} />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="videocam-outline" size={64} color="#9CA3AF" />
-              <Text style={styles.emptyTitle}>Yayınınız Yok</Text>
-              <Text style={styles.emptySubtitle}>İlk yayınınızı oluşturmak için yukarıdaki butona tıklayın</Text>
-            </View>
-          )
         ) : (
           archivedStreams.length > 0 ? (
             archivedStreams.map(stream => (
-              <ArchivedStreamCard key={stream.id} stream={stream} />
+              <ArchivedStreamCard
+                key={stream.id}
+                stream={stream}
+                onWatch={async (s) => {
+                  try {
+                    const data = await liveAPI.getToken({ role: 'audience', channel: s.channel || 'kc_demo' });
+                    navigation.navigate('WatchLive', { channel: data.channel, role: 'audience', token: data.rtcToken });
+                  } catch (e) {
+                    Alert.alert('Hata', 'Yayın izleme başlatılamadı');
+                  }
+                }}
+              />
             ))
           ) : (
             <View style={styles.emptyState}>

@@ -1,835 +1,527 @@
-import { useState } from 'react'
-import { Video, Plus, Play, Pause, Square, Settings, Eye, Edit, Trash2, Users, Clock, MapPin } from 'lucide-react'
+import React, { useState, useEffect } from 'react';
+import { Video, Plus, Play, Pause, Square, Settings, Eye, Edit, Trash2, Users, Clock, MapPin, Copy, User, Hash, Zap, Calendar } from "lucide-react";
+import { adminApi, streamsAPI } from "../lib/adminApi";
+import Layout from "../components/Layout";
 
-export default function StreamsPage() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState('all')
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedStream, setSelectedStream] = useState<any>(null)
+const StreamsPage: React.FC = () => {
+  const [streams, setStreams] = useState<any[]>([]);
+  const [livekitStreams, setLivekitStreams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [streamTitle, setStreamTitle] = useState('');
+  const [streamDescription, setStreamDescription] = useState('');
+  const [creatingStream, setCreatingStream] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<any>(null);
+  const [donations, setDonations] = useState<any[]>([]);
 
-  // Mock streams data
-  const streams = [
-    {
-      id: 1,
-      title: 'Kurban Kesimi - Türkiye Bölgesi',
-      status: 'live',
-      viewers: 1250,
-      duration: '2:15:30',
-      location: 'Türkiye',
-      animal_count: 15,
-      created_at: '2024-01-15 10:00',
-      organizer: 'Türkiye Diyanet İşleri',
-      target_amount: 5000,
-      current_amount: 3200,
-      rtmp_key: 'turkiye_buyukbas_001',
-      stream_url: 'https://stream.example.com/turkiye_buyukbas_001',
-      description: 'Türkiye bölgesinde büyükbaş kurban kesimi canlı yayını',
-      tags: ['Büyükbaş', 'Türkiye', 'Canlı'],
-      quality: '1080p',
-      bitrate: '2500 kbps',
-    },
-    {
-      id: 2,
-      title: 'Afrika Kurban Kesimi',
-      status: 'scheduled',
-      viewers: 0,
-      duration: '00:00:00',
-      location: 'Afrika',
-      animal_count: 8,
-      created_at: '2024-01-20 14:00',
-      organizer: 'Afrika Yardım Kuruluşu',
-      target_amount: 3000,
-      current_amount: 0,
-      rtmp_key: 'afrika_koyun_002',
-      stream_url: 'https://stream.example.com/afrika_koyun_002',
-      description: 'Afrika bölgesinde koyun kurban kesimi planlanan yayını',
-      tags: ['Koyun', 'Afrika', 'Planlandı'],
-      quality: '720p',
-      bitrate: '1500 kbps',
-    },
-    {
-      id: 3,
-      title: 'Kurban Bağışı Canlı Yayını',
-      status: 'ended',
-      viewers: 890,
-      duration: '1:45:20',
-      location: 'Türkiye',
-      animal_count: 12,
-      created_at: '2024-01-18 09:00',
-      organizer: 'Türkiye İnsani Yardım Vakfı',
-      target_amount: 4000,
-      current_amount: 3800,
-      rtmp_key: 'turkiye_koc_003',
-      stream_url: 'https://stream.example.com/turkiye_koc_003',
-      description: 'Türkiye\'de koç kurban kesimi tamamlanan yayını',
-      tags: ['Koç', 'Türkiye', 'Tamamlandı'],
-      quality: '1080p',
-      bitrate: '2000 kbps',
-    },
-    {
-      id: 4,
-      title: 'Somali Büyükbaş Kurban Kesimi',
-      status: 'draft',
-      viewers: 0,
-      duration: '00:00:00',
-      location: 'Somali',
-      animal_count: 20,
-      created_at: '2024-01-22 16:00',
-      organizer: 'Somali İnsani Yardım Vakfı',
-      target_amount: 8000,
-      current_amount: 0,
-      rtmp_key: 'somali_buyukbas_004',
-      stream_url: 'https://stream.example.com/somali_buyukbas_004',
-      description: 'Somali bölgesinde büyükbaş kurban kesimi taslak yayını',
-      tags: ['Büyükbaş', 'Somali', 'Taslak'],
-      quality: '720p',
-      bitrate: '1800 kbps',
-    },
-  ]
+  useEffect(() => {
+    fetchStreams();
+    fetchLivekitStreams();
+    fetchStats();
+    fetchDonations();
+  }, [page, selectedStatus]);
 
-  const getStatusConfig = (status: string) => {
-    const configs = {
-      live: { label: 'Canlı', color: '#ef4444', bgColor: '#fee2e2', icon: Play },
-      scheduled: { label: 'Planlandı', color: '#f59e0b', bgColor: '#fef3c2', icon: Clock },
-      ended: { label: 'Bitti', color: '#6b7280', bgColor: '#f3f4f6', icon: Square },
-      draft: { label: 'Taslak', color: '#8b5cf6', bgColor: '#f3e8ff', icon: Edit },
+  const fetchStreams = async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Streams yükleniyor...');
+      
+      const params: any = { page, size: 20 };
+      if (selectedStatus !== 'all') params.status = selectedStatus;
+      
+      const response = await streamsAPI.getStreams(params);
+      console.log('✅ Streams response:', response);
+      
+      setStreams(response.items || []);
+      setTotal(response.total || 0);
+      console.log('✅ Streams yüklendi:', response.items?.length || 0);
+    } catch (error) {
+      console.error('❌ Streams yükleme hatası:', error);
+      setStreams([]);
+    } finally {
+      setLoading(false);
     }
-    return configs[status as keyof typeof configs] || configs.scheduled
-  }
+  };
 
-  const handleCreateStream = () => {
-    setShowCreateModal(true)
-  }
-
-  const handleEditStream = (stream: any) => {
-    setSelectedStream(stream)
-    setShowCreateModal(true)
-  }
-
-  const handleDeleteStream = (streamId: number) => {
-    if (confirm('Bu yayını silmek istediğinizden emin misiniz?')) {
-      console.log('Yayın siliniyor:', streamId)
-      // API call to delete stream
+  const fetchLivekitStreams = async () => {
+    try {
+      // Gerçek LiveKit API'den stream verilerini çek
+      // TODO: LiveKit API endpoint'i eklendiğinde buraya gerçek API çağrısı yapılacak
+      setLivekitStreams([]);
+    } catch (error) {
+      console.error('❌ LiveKit streams yükleme hatası:', error);
+      setLivekitStreams([]);
     }
-  }
+  };
 
-  const handleStartStream = (streamId: number) => {
-    console.log('Yayın başlatılıyor:', streamId)
-    // API call to start stream
-  }
-
-  const handleStopStream = (streamId: number) => {
-    if (confirm('Yayını durdurmak istediğinizden emin misiniz?')) {
-      console.log('Yayın durduruluyor:', streamId)
-      // API call to stop stream
+  const filteredStreams = streams.filter(stream => {
+    if (searchTerm && !stream.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
     }
-  }
+    if (selectedStatus !== 'all' && stream.status !== selectedStatus) {
+      return false;
+    }
+    return true;
+  });
+
+  const handleJoinStream = (streamId: string) => {
+    console.log('Yayına katılıyor:', streamId);
+    // Yayın izleme sayfasına yönlendir
+    window.open(`/stream/${streamId}`, '_blank');
+  };
+
+  const handleGetRTMPInfo = async (streamId: string) => {
+    try {
+      // RTMP Ingress oluştur
+      const ingressResponse = await fetch(`${import.meta.env.VITE_API_BASE}/streams/${streamId}/ingress`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (ingressResponse.ok) {
+        const ingressData = await ingressResponse.json();
+        alert(`RTMP Yayın Bilgileri:\n\nRTMP URL: ${ingressData.rtmp_url}\nStream Key: ${ingressData.stream_key}\n\nLarix Broadcaster veya Streamlabs ile yayınlayabilirsiniz!`);
+      } else {
+        const errorData = await ingressResponse.json();
+        alert(`RTMP Ingress oluşturulamadı: ${errorData.detail || 'Bilinmeyen hata'}`);
+      }
+    } catch (error) {
+      console.error('RTMP bilgileri alınamadı:', error);
+      alert('RTMP bilgileri alınamadı!');
+    }
+  };
+
+  const handleEndStream = async (streamId: string) => {
+    try {
+      console.log('Yayın sonlandırılıyor:', streamId);
+      await livekitAPI.endStream(streamId);
+      fetchLivekitStreams(); // Listeyi yenile
+    } catch (error) {
+      console.error('Yayın sonlandırma hatası:', error);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await adminApi.getStats();
+      setStats(response?.data || null);
+    } catch (error) {
+      console.error('Stats yüklenemedi:', error);
+    }
+  };
+
+  const fetchDonations = async () => {
+    try {
+      const response = await adminApi.getDonations();
+      setDonations(response?.items || []);
+    } catch (error) {
+      console.error('Bağışlar yüklenemedi:', error);
+    }
+  };
+
+  const handleCreateStream = async () => {
+    if (!selectedUserId) {
+      alert('Kullanıcı seçiniz');
+      return;
+    }
+
+    if (!streamTitle.trim()) {
+      alert('Yayın başlığı gerekli');
+      return;
+    }
+
+    try {
+      setCreatingStream(true);
+      
+      const selectedDonation = donations.find(d => d.user_id === selectedUserId);
+      
+      const response = await streamsAPI.createStream({
+        title: streamTitle.trim(),
+        description: streamDescription.trim(),
+        donation_id: selectedDonation?.id,
+        duration_seconds: 120
+      });
+
+      alert(`Yayın oluşturuldu!\nStream ID: ${response.stream_id}\nDurum: ${response.status}`);
+      setShowCreateModal(false);
+      setSelectedUserId('');
+      setStreamTitle('');
+      setStreamDescription('');
+      fetchStreams(); // Streams listesini yenile
+      fetchLivekitStreams();
+      fetchStats(); // Stats'ı yenile
+      
+    } catch (error) {
+      console.error('Yayın oluşturulamadı:', error);
+      alert('Yayın oluşturulamadı: ' + error.message);
+    } finally {
+      setCreatingStream(false);
+    }
+  };
+
+  const copyUserId = (userId: string) => {
+    navigator.clipboard.writeText(userId);
+    alert('Kullanıcı ID kopyalandı');
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '2rem'
-      }}>
-        <div>
-          <h1 style={{
-            fontSize: '1.875rem',
-            fontWeight: '700',
-            color: '#111827',
-            margin: 0
-          }}>Canlı Yayınlar</h1>
-          <p style={{
-            color: '#6b7280',
-            margin: '0.5rem 0 0 0'
-          }}>
-            Kurban kesimi canlı yayınlarını yönetin ve izleyin
-          </p>
-        </div>
-        
-        <button
-          onClick={handleCreateStream}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            padding: '0.75rem 1.5rem',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-        >
-          <Plus size={20} />
-          Yeni Yayın
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '2rem',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ flex: '1', minWidth: '300px' }}>
-          <input
-            type="text"
-            placeholder="Yayın ara..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem'
-            }}
-          />
-        </div>
-        
-        <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          style={{
-            padding: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.5rem',
-            fontSize: '0.875rem',
-            backgroundColor: 'white'
-          }}
-        >
-          <option value="all">Tüm Durumlar</option>
-          <option value="live">Canlı</option>
-          <option value="scheduled">Planlandı</option>
-          <option value="ended">Bitti</option>
-          <option value="draft">Taslak</option>
-        </select>
-      </div>
-
-      {/* Stats Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '1rem',
-        marginBottom: '2rem'
-      }}>
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#ef4444' }}>
-            {streams.filter(s => s.status === 'live').length}
-          </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Canlı Yayın</div>
-        </div>
-        
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#f59e0b' }}>
-            {streams.filter(s => s.status === 'scheduled').length}
-          </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Planlandı</div>
-        </div>
-        
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#6b7280' }}>
-            {streams.filter(s => s.status === 'ended').length}
-          </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Tamamlandı</div>
-        </div>
-        
-        <div style={{
-          backgroundColor: 'white',
-          padding: '1.5rem',
-          borderRadius: '0.5rem',
-          border: '1px solid #e5e7eb',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '2rem', fontWeight: '700', color: '#8b5cf6' }}>
-            {streams.filter(s => s.status === 'draft').length}
-          </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem' }}>Taslak</div>
-        </div>
-      </div>
-
-      {/* Live streams grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-        gap: '1.5rem'
-      }}>
-        {streams.map((stream) => {
-          const statusConfig = getStatusConfig(stream.status)
-          const Icon = statusConfig.icon
-          
-          return (
-            <div key={stream.id} style={{
-              backgroundColor: 'white',
-              borderRadius: '0.5rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e5e7eb',
-              overflow: 'hidden'
-            }}>
-              {/* Stream thumbnail */}
-              <div style={{
-                height: '200px',
-                backgroundColor: '#f3f4f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}>
-                <Video style={{ height: '3rem', width: '3rem', color: '#9ca3af' }} />
-                
-                {/* Status indicator */}
-                <div style={{
-                  position: 'absolute',
-                  top: '0.75rem',
-                  right: '0.75rem',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  backgroundColor: statusConfig.bgColor,
-                  color: statusConfig.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}>
-                  <Icon style={{ height: '0.75rem', width: '0.75rem' }} />
-                  {statusConfig.label}
-                </div>
-
-                {/* Live indicator */}
-                {stream.status === 'live' && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '0.75rem',
-                    left: '0.75rem',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '9999px',
-                    fontSize: '0.75rem',
-                    fontWeight: '500',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}>
-                    <div style={{
-                      width: '0.5rem',
-                      height: '0.5rem',
-                      backgroundColor: 'white',
-                      borderRadius: '50%',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                    CANLI
-                  </div>
-                )}
-              </div>
-
-              {/* Stream info */}
-              <div style={{ padding: '1.5rem' }}>
-                <h3 style={{
-                  fontSize: '1.125rem',
-                  fontWeight: '600',
-                  color: '#111827',
-                  marginBottom: '1rem'
-                }}>
-                  {stream.title}
-                </h3>
-
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem',
-                  marginBottom: '1.5rem'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.875rem',
-                    color: '#6b7280'
-                  }}>
-                    <MapPin style={{ height: '1rem', width: '1rem' }} />
-                    {stream.location}
-                  </div>
-
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.875rem',
-                      color: '#6b7280'
-                    }}>
-                      <Users style={{ height: '1rem', width: '1rem' }} />
-                      {stream.viewers} izleyici
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.875rem',
-                      color: '#6b7280'
-                    }}>
-                      <Clock style={{ height: '1rem', width: '1rem' }} />
-                      {stream.duration}
-                    </div>
-                  </div>
-
-                  <div style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280'
-                  }}>
-                    {stream.animal_count} hayvan • {stream.created_at}
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div style={{
-                  display: 'flex',
-                  gap: '0.5rem'
-                }}>
-                  {stream.status === 'live' && (
-                    <button style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      padding: '0.5rem 0.75rem',
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer'
-                    }}>
-                      <Pause style={{ height: '0.875rem', width: '0.875rem' }} />
-                      Durdur
-                    </button>
-                  )}
-
-                  {stream.status === 'scheduled' && (
-                    <button style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      padding: '0.5rem 0.75rem',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer'
-                    }}>
-                      <Play style={{ height: '0.875rem', width: '0.875rem' }} />
-                      Başlat
-                    </button>
-                  )}
-
-                  <button style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.5rem 0.75rem',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer'
-                  }}>
-                    <Eye style={{ height: '0.875rem', width: '0.875rem' }} />
-                    İzle
-                  </button>
-
-                  <button style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.5rem 0.75rem',
-                    backgroundColor: '#f59e0b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer'
-                  }}>
-                    <Edit style={{ height: '0.875rem', width: '0.875rem' }} />
-                    Düzenle
-                  </button>
-
-                  <button style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.5rem 0.75rem',
-                    backgroundColor: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer'
-                  }}>
-                    <Settings style={{ height: '0.875rem', width: '0.875rem' }} />
-                    Ayarlar
-                  </button>
-                </div>
-              </div>
+    <Layout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="bg-zinc-900 rounded-xl shadow-sm border border-zinc-800 p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-zinc-100">Canlı Yayınlar</h1>
+              <p className="text-zinc-400 mt-2">Kurban kesimi canlı yayınlarını yönetin ve izleyin</p>
             </div>
-          )
-        })}
-      </div>
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 font-medium transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Yeni Yayın
+            </button>
+          </div>
 
-      {/* CSS for pulse animation */}
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
-
-      {/* Create/Edit Stream Modal */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '0.75rem',
-            padding: '2rem',
-            width: '90%',
-            maxWidth: '600px',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1.5rem'
-            }}>
-              <h2 style={{
-                fontSize: '1.5rem',
-                fontWeight: '600',
-                color: '#111827',
-                margin: 0
-              }}>
-                {selectedStream ? 'Yayını Düzenle' : 'Yeni Yayın Oluştur'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowCreateModal(false)
-                  setSelectedStream(null)
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#6b7280'
-                }}
-              >
-                ×
-              </button>
+          {/* Search and Filter */}
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Yayın ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Tüm Durumlar</option>
+              <option value="live">Canlı</option>
+              <option value="ended">Sonlandırılmış</option>
+            </select>
+          </div>
 
-            <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Yayın Başlığı
-                </label>
-                <input
-                  type="text"
-                  defaultValue={selectedStream?.title || ''}
-                  placeholder="Yayın başlığını girin"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '0.5rem'
-                }}>
-                  Açıklama
-                </label>
-                <textarea
-                  defaultValue={selectedStream?.description || ''}
-                  placeholder="Yayın açıklamasını girin"
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                    resize: 'vertical'
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
+              <div className="flex items-center justify-between">
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Bölge
+                  <p className="text-zinc-400 text-sm">Canlı Yayın</p>
+                  <p className="text-2xl font-bold text-green-400">{streams.filter(s => s.status === 'live').length}</p>
+                </div>
+                <Video className="w-8 h-8 text-green-400" />
+              </div>
+            </div>
+            <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-zinc-400 text-sm">Oluşturulan Yayın</p>
+                  <p className="text-2xl font-bold text-blue-400">{streams.length}</p>
+                </div>
+                <Video className="w-8 h-8 text-blue-400" />
+              </div>
+            </div>
+            <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-zinc-400 text-sm">Tamamlanan</p>
+                  <p className="text-2xl font-bold text-zinc-400">{streams.filter(s => s.status === 'ended').length}</p>
+                </div>
+                <Square className="w-8 h-8 text-zinc-400" />
+              </div>
+            </div>
+            <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-zinc-400 text-sm">Beklenen Yayın</p>
+                  <p className="text-2xl font-bold text-orange-400">{donations.length - streams.length}</p>
+                </div>
+                <Clock className="w-8 h-8 text-orange-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Streams List */}
+        <div className="bg-zinc-900 rounded-xl shadow-sm border border-zinc-800 p-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-zinc-400">Yayınlar yükleniyor...</p>
+              </div>
+            </div>
+          ) : filteredStreams.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredStreams.map((stream) => (
+                <div key={stream.id} className="bg-zinc-800 rounded-lg p-4 border border-zinc-700 hover:border-zinc-600 transition-colors">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-zinc-100">{stream.title}</h3>
+                    <span className={`status-badge ${
+                      stream.status === 'live' 
+                        ? 'status-live' 
+                        : stream.status === 'scheduled'
+                        ? 'status-scheduled'
+                        : 'status-ended'
+                    }`}>
+                      {stream.status === 'live' ? 'Canlı' : 
+                       stream.status === 'scheduled' ? 'Bekleniyor' : 
+                       'Sonlandırılmış'}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm text-zinc-400 mb-4">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      <span className="text-zinc-300 font-medium">{stream.user_name} {stream.user_surname}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Hash className="w-4 h-4" />
+                      <span className="font-mono text-xs">{stream.kurban_id?.substring(0, 8)}...</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4" />
+                      <span>Kesilecek Hayvan: {stream.animal_type || 'Koyun'}, {stream.animal_count} adet</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>Bağış: {new Date(stream.created_at).toLocaleDateString('tr-TR')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span>Yayın: {new Date(stream.created_at).toLocaleDateString('tr-TR')}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Butonlar canlı ve beklenen yayınlarda gösterilsin */}
+                  {(stream.status === 'live' || stream.status === 'scheduled') && (
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleJoinStream(stream.id)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                      >
+                        <Play className="w-3 h-3" />
+                        Katıl
+                      </button>
+                      <button 
+                        onClick={() => handleGetRTMPInfo(stream.id)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                      >
+                        <Zap className="w-3 h-3" />
+                        RTMP
+                      </button>
+                      <button 
+                        onClick={() => handleEndStream(stream.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                      >
+                        <Square className="w-3 h-3" />
+                        Sonlandır
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Video className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-zinc-100 mb-2">Aktif yayın yok</h3>
+              <p className="text-zinc-400">Şu anda canlı yayın bulunmuyor</p>
+            </div>
+          )}
+        </div>
+
+        {/* Create Stream Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-zinc-800 rounded-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-semibold text-zinc-100">
+                  Yeni Yayın Oluştur
+                </h2>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-zinc-400 hover:text-zinc-300 text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* User Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Bağış Yapan Kullanıcı
                   </label>
-                  <select style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                    backgroundColor: 'white'
-                  }}>
-                    <option value="Türkiye">Türkiye</option>
-                    <option value="Somali">Somali</option>
-                    <option value="Pakistan">Pakistan</option>
-                    <option value="Bangladeş">Bangladeş</option>
-                    <option value="Afrika">Afrika</option>
+                  <select
+                    value={selectedUserId}
+                    onChange={(e) => {
+                      setSelectedUserId(e.target.value);
+                      const selectedDonation = donations.find(d => d.user_id === e.target.value);
+                      if (selectedDonation) {
+                        const userName = `${selectedDonation.name} ${selectedDonation.surname}`;
+                        setStreamTitle(`${userName} kurban kesim yayını`);
+                        setStreamDescription(`${userName} için kurban kesimi canlı yayını`);
+                      }
+                    }}
+                    className="w-full px-4 py-3 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Kullanıcı seçiniz</option>
+                    {donations.map((donation) => (
+                      <option key={donation.id} value={donation.user_id}>
+                        {donation.name} {donation.surname} - {donation.amount} TL
+                      </option>
+                    ))}
                   </select>
                 </div>
 
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Hayvan Sayısı
-                  </label>
-                  <input
-                    type="number"
-                    defaultValue={selectedStream?.animal_count || 1}
-                    min="1"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              </div>
+                {/* Selected User Info */}
+                {selectedUserId && (
+                  <div className="bg-zinc-700 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-zinc-100">Seçilen Kullanıcı</h3>
+                      <button
+                        onClick={() => copyUserId(selectedUserId)}
+                        className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+                      >
+                        <Copy size={16} />
+                        ID Kopyala
+                      </button>
+                    </div>
+                    {(() => {
+                      const selectedDonation = donations.find(d => d.user_id === selectedUserId);
+                      return selectedDonation ? (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Kullanıcı:</span>
+                            <span className="text-zinc-100">{selectedDonation.name} {selectedDonation.surname}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Bağış:</span>
+                            <span className="text-zinc-100">{selectedDonation.amount} TL</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Tutar:</span>
+                            <span className="text-zinc-100">{selectedDonation.amount} TL</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-zinc-400">Tarih:</span>
+                            <span className="text-zinc-100">
+                              {new Date(selectedDonation.created_at).toLocaleDateString('tr-TR')}
+                            </span>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {/* Stream Title */}
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Hedef Tutar (₺)
-                  </label>
-                  <input
-                    type="number"
-                    defaultValue={selectedStream?.target_amount || 1000}
-                    min="100"
-                    step="100"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    RTMP Anahtarı
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Yayın Başlığı
                   </label>
                   <input
                     type="text"
-                    defaultValue={selectedStream?.rtmp_key || ''}
-                    placeholder="rtmp_key_001"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      outline: 'none'
-                    }}
+                    value={streamTitle}
+                    onChange={(e) => setStreamTitle(e.target.value)}
+                    placeholder="Yayın başlığını girin"
+                    className="w-full px-4 py-3 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {/* Stream Description */}
                 <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Kalite
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                    Açıklama
                   </label>
-                  <select style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                    backgroundColor: 'white'
-                  }}>
-                    <option value="720p">720p</option>
-                    <option value="1080p">1080p</option>
-                    <option value="4K">4K</option>
-                  </select>
+                  <textarea
+                    value={streamDescription}
+                    onChange={(e) => setStreamDescription(e.target.value)}
+                    placeholder="Yayın açıklamasını girin"
+                    rows={3}
+                    className="w-full px-4 py-3 bg-zinc-700 border border-zinc-600 rounded-lg text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                  />
                 </div>
 
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Bitrate
-                  </label>
-                  <select style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    outline: 'none',
-                    backgroundColor: 'white'
-                  }}>
-                    <option value="1500 kbps">1500 kbps</option>
-                    <option value="2000 kbps">2000 kbps</option>
-                    <option value="2500 kbps">2500 kbps</option>
-                    <option value="5000 kbps">5000 kbps</option>
-                  </select>
+                {/* Action Buttons */}
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 px-6 py-3 bg-zinc-600 hover:bg-zinc-500 text-white rounded-lg font-medium transition-colors"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={handleCreateStream}
+                    disabled={creatingStream || !selectedUserId || !streamTitle.trim()}
+                    className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-zinc-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    {creatingStream ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Oluşturuluyor...
+                      </>
+                    ) : (
+                      <>
+                        <Video size={16} />
+                        Yayın Oluştur
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-
-              <div style={{
-                display: 'flex',
-                gap: '1rem',
-                marginTop: '1.5rem'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateModal(false)
-                    setSelectedStream(null)
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#6b7280',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  İptal
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {selectedStream ? 'Güncelle' : 'Oluştur'}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
-  )
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default StreamsPage;
+
+// CSS Styles
+const styles = `
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  
+  .status-live {
+    background-color: #10b981;
+    color: white;
+  }
+  
+  .status-scheduled {
+    background-color: #f59e0b;
+    color: white;
+  }
+  
+  .status-ended {
+    background-color: #6b7280;
+    color: white;
+  }
+`;
+
+// CSS'i head'e ekle
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
 }

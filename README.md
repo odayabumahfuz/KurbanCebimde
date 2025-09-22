@@ -1,317 +1,662 @@
-# 🐑 Kurban Cebimde - Kurban Bağış Platformu
+# 🐑 KurbanCebimde - Kurban Organizasyon Platformu
 
-**Kurban Cebimde**, kurban bağışlarını dijital ortamda yönetmek için geliştirilmiş kapsamlı bir platformdur. Proje üç ana bileşenden oluşmaktadır:
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-1C1E24?style=for-the-badge&logo=expo&logoColor=D04A37)](https://expo.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
-- **Backend API** (Flask + SQLite/PostgreSQL)
-- **Admin Panel** (React + TypeScript + Vite)  
-- **Mobil Uygulama** (React Native + Expo)
+> Modern kurban organizasyon platformu - Push bildirimleri, sertifika sistemi ve canlı yayın desteği ile
 
----
+## 📋 İçindekiler
 
-## 🚀 Hızlı Başlangıç
+- [🚀 Özellikler](#-özellikler)
+- [🏗️ Mimari](#️-mimari)
+- [📦 Kurulum](#-kurulum)
+- [🔧 Konfigürasyon](#-konfigürasyon)
+- [🧪 Test](#-test)
+- [📚 API Dokümantasyonu](#-api-dokümantasyonu)
+- [🔔 Push Bildirimleri](#-push-bildirimleri)
+- [📜 Sertifika Sistemi](#-sertifika-sistemi)
+- [🛡️ Güvenlik](#️-güvenlik)
+- [📊 Monitoring](#-monitoring)
+- [🤝 Katkıda Bulunma](#-katkıda-bulunma)
+- [📄 Lisans](#-lisans)
 
-### Sunucuya Deploy Edilmiş Durumda
+## 🚀 Özellikler
 
-Proje bu sunucuya başarıyla deploy edilmiştir. Tüm servisler Docker container'ları olarak çalışmaktadır.
+### 🔔 Push Bildirimleri
+- ✅ Expo Push Notification desteği
+- ✅ Toplu bildirim gönderimi
+- ✅ Kurban, bağış ve yayın bildirimleri
+- ✅ Bildirim kanalları ve ses ayarları
+- ✅ Token yönetimi ve kayıt sistemi
 
-### 🌐 Erişim URL'leri
+### 📜 Sertifika Sistemi
+- ✅ Kurban katılım sertifikaları
+- ✅ Bağış sertifikaları
+- ✅ Etkinlik katılım sertifikaları
+- ✅ QR kod doğrulama
+- ✅ PDF indirme
+- ✅ Sertifika istatistikleri
 
-- **Ana Site**: `http://sunucu-ip:8081`
-- **Admin Panel**: `http://sunucu-ip:3000`
-- **API Backend**: `http://sunucu-ip:8000`
-- **API Health Check**: `http://sunucu-ip:8000/health`
+### 🎥 Canlı Yayın
+- ✅ LiveKit entegrasyonu
+- ✅ Agora SDK desteği
+- ✅ RTMP stream desteği
+- ✅ Yayın kalitesi ayarları
 
-Not: Geliştirme sırasında admin panel lokal Vite dev sunucusunda `http://localhost:3001` olarak açılabilir; Docker Compose ortamında `http://localhost:3000`’dan erişilir.
+### 🛡️ Güvenlik & Performans
+- ✅ JWT authentication
+- ✅ Rate limiting (Redis + Memory)
+- ✅ Global error handling
+- ✅ Input validation
+- ✅ CORS konfigürasyonu
+- ✅ Request ID tracking
 
-### 🔧 Servis Durumu
+### 📱 Mobil Uygulama
+- ✅ React Native + Expo
+- ✅ Cross-platform (iOS/Android)
+- ✅ Push notification desteği
+- ✅ Offline-first yaklaşım
+- ✅ Modern UI/UX
+
+## 🏗️ Mimari
+
+Detaylı sistem mimarisi için [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) dosyasına bakın.
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   React Native  │    │   Admin Panel   │    │   Web Client    │
+│   (Expo)        │    │   (Vite)        │    │   (React)       │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                    ┌─────────────┴─────────────┐
+                    │      FastAPI Backend       │
+                    │   (Python 3.11 + Uvicorn)  │
+                    └─────────────┬─────────────┘
+                                 │
+          ┌──────────────────────┼──────────────────────┐
+          │                      │                      │
+┌─────────┴───────┐    ┌─────────┴───────┐    ┌─────────┴───────┐
+│   PostgreSQL    │    │      Redis      │    │   Expo Push    │
+│   (Database)    │    │   (Cache/Rate)  │    │   Service      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### 🚀 Production Deployment
 
 ```bash
-# Servisleri kontrol et
-docker ps
+# Production deployment
+./deploy-prod.sh
 
-# Servisleri başlat
-cd /root/KurbanCebimde
+# Environment setup
+cp env.example .env
+# .env dosyasını düzenleyin
+
+# Production services
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### 🏛️ Teknoloji Stack
+
+**Backend:**
+- FastAPI (Python 3.11)
+- PostgreSQL (Database)
+- Redis (Cache & Rate Limiting)
+- Uvicorn (ASGI Server)
+- SQLAlchemy (ORM)
+- Pydantic (Validation)
+- JWT (Authentication)
+
+**Frontend:**
+- React Native (Expo SDK 53)
+- TypeScript
+- React Navigation
+- Expo Notifications
+- AsyncStorage
+
+**DevOps:**
+- Docker & Docker Compose
+- Nginx (Reverse Proxy)
+- SSL/TLS
+- CI/CD Pipeline
+
+## 📦 Kurulum
+
+### 🐳 Docker ile Kurulum (Önerilen)
+
+```bash
+# Repository'yi klonla
+git clone https://github.com/your-org/kurban-cebimde.git
+cd kurban-cebimde
+
+# Environment dosyasını kopyala
+cp .env.example .env
+
+# Environment değişkenlerini düzenle
+nano .env
+
+# Docker Compose ile başlat
 docker-compose up -d
 
-# Servisleri durdur
-docker-compose down
-
-# Logları görüntüle
+# Logları kontrol et
 docker-compose logs -f
 ```
 
----
+### 🔧 Manuel Kurulum
 
-## 📊 Proje Yapısı
+#### Backend Kurulumu
 
-```
-KurbanCebimde/
-├── 🐳 Docker Konfigürasyonu
-│   ├── docker-compose.yml          # Servis orkestrasyonu
-│   ├── nginx.conf                   # Reverse proxy
-│   └── ssl/                         # SSL sertifikaları
-│
-├── 🔧 Backend (Flask)
-│   ├── kurban-cebimde/backend/
-│   │   ├── main.py                  # Ana Flask uygulaması
-│   │   ├── requirements.txt         # Python bağımlılıkları
-│   │   └── test.db                  # SQLite veritabanı
-│   └── backend/                     # Alternatif backend
-│
-├── 🖥️ Admin Panel (React + TypeScript)
-│   ├── kurban-cebimde/admin-panel/
-│   │   ├── src/
-│   │   │   ├── components/          # UI bileşenleri
-│   │   │   ├── pages/               # Sayfa bileşenleri
-│   │   │   ├── stores/              # Zustand state stores
-│   │   │   └── lib/                 # Utility fonksiyonlar
-│   │   ├── package.json             # Node.js bağımlılıkları
-│   │   └── vite.config.ts           # Vite konfigürasyonu
-│
-├── 📱 Mobil Uygulama (React Native + Expo)
-│   ├── kurban-cebimde/
-│   │   ├── src/
-│   │   │   ├── screens/             # 16 ekran tamamlandı
-│   │   │   ├── components/          # UI bileşenleri
-│   │   │   ├── contexts/            # Auth & Cart contexts
-│   │   │   └── navigation/          # Navigation setup
-│   │   ├── package.json             # Expo bağımlılıkları
-│   │   └── app.json                 # Expo konfigürasyonu
-│
-└── 📋 Dokümantasyon
-    ├── README.md                    # Bu dosya
-    ├── SUNUCU_DURUM_RAPORU.md       # Detaylı durum raporu
-    ├── ACTIVE_FEATURES.md           # Aktif özellikler
-    └── kurban-cebimde/
-        ├── PROJE_DURUMU.md          # Proje durumu
-        ├── PROJE_TAMAMLANDI.md      # Tamamlanan özellikler
-        └── ADMIN_PANEL_SETUP.md     # Admin panel kurulumu
-```
-
----
-
-## 🔧 Teknoloji Stack
-
-### Backend
-- **Framework**: Flask + Flask-CORS
-- **Veritabanı**: SQLite (PostgreSQL'e geçiş planlanıyor)
-- **Authentication**: Session-based (UUID tokens)
-- **API**: RESTful endpoints
-
-### Admin Panel
-- **Frontend**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **State Management**: Zustand
-- **HTTP Client**: Axios
-- **Forms**: React Hook Form + Zod validation
-
-### Mobil Uygulama
-- **Framework**: React Native + Expo SDK 53
-- **Navigation**: React Navigation v6
-- **State Management**: Context API
-- **Storage**: AsyncStorage
-- **HTTP Client**: Axios
-
-### DevOps
-- **Containerization**: Docker + Docker Compose
-- **Reverse Proxy**: Nginx
-- **Database**: PostgreSQL + Redis
-- **Monitoring**: Temel health check'ler
-
----
-
-## 📡 API Endpoints
-
-### Kullanıcı API'leri (`/api/v1`)
-```
-✅ GET  /health                    - Sağlık kontrolü
-✅ POST /auth/login               - Kullanıcı girişi
-✅ POST /auth/register             - Kullanıcı kaydı
-✅ POST /auth/refresh              - Token yenileme
-✅ GET  /auth/me                   - Profil bilgisi
-✅ POST /auth/logout               - Çıkış
-```
-
-### Admin API'leri (`/api/admin/v1`)
-```
-✅ POST /auth/login               - Admin girişi
-✅ GET  /users                     - Kullanıcı listesi
-✅ GET  /donations                 - Bağış listesi
-✅ GET  /carts                     - Sepet listesi
-```
-
----
-
-## 🗄️ Veritabanı Yapısı
-
-### Users Tablosu
-```sql
-CREATE TABLE users (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    surname TEXT,
-    username TEXT UNIQUE,
-    phone TEXT UNIQUE,
-    email TEXT,
-    password_hash TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### User Sessions Tablosu
-```sql
-CREATE TABLE user_sessions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    device_id TEXT,
-    ip TEXT,
-    user_agent TEXT,
-    started_at TEXT NOT NULL,
-    ended_at TEXT
-);
-```
-
----
-
-## 🚀 Geliştirme Komutları
-
-### Docker Servisleri
 ```bash
-# Tüm servisleri başlat
-docker-compose up -d
+# Backend klasörüne git
+cd backend
 
-# Belirli servisi başlat
-docker-compose up -d [service-name]
+# Virtual environment oluştur
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate  # Windows
 
-# Servisleri durdur
-docker-compose down
+# Dependencies yükle
+pip install -r requirements.txt
 
-# Logları görüntüle
-docker-compose logs -f [service-name]
+# Environment değişkenlerini ayarla
+cp .env.example .env
+nano .env
 
-# Container'a erişim
-docker exec -it kurbancebimde-api-1 bash
-docker exec -it kurbancebimde-admin-panel-1 sh
+# Database migration
+python -m alembic upgrade head
+
+# Backend'i başlat
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Backend Geliştirme
-```bash
-cd kurban-cebimde/backend
-pip install flask flask-cors
-python main.py
-```
+#### Frontend Kurulumu
 
-### Admin Panel Geliştirme
 ```bash
-cd kurban-cebimde/admin-panel
+# React Native uygulaması
+cd kurban-cebimde
+
+# Dependencies yükle
+npm install
+
+# Expo CLI yükle (global)
+npm install -g @expo/cli
+
+# Expo development server başlat
+npx expo start
+
+# Admin panel
+cd admin-panel
 npm install
 npm run dev
 ```
 
-### Mobil Uygulama Geliştirme
+## 🔧 Konfigürasyon
+
+### 🌍 Environment Variables
+
 ```bash
-cd kurban-cebimde
-npm install
-npx expo start
+# Database
+DATABASE_URL=postgresql://postgres:password@localhost:5432/kurban_cebimde
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# JWT
+SECRET_KEY=your-super-secret-key-change-in-production
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=60
+
+# Expo Push Notifications
+EXPO_ACCESS_TOKEN=your-expo-access-token
+
+# Agora (Video/Audio)
+AGORA_APP_ID=your-agora-app-id
+AGORA_APP_CERT=your-agora-certificate
+
+# LiveKit (Streaming)
+LIVEKIT_URL=wss://your-livekit-server.com
+LIVEKIT_API_KEY=your-livekit-api-key
+LIVEKIT_API_SECRET=your-livekit-api-secret
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=3600
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081
+
+# Debug
+DEBUG=true
+LOG_LEVEL=INFO
 ```
 
----
+### 🐳 Docker Compose Konfigürasyonu
 
-## ⚠️ Bilinen Sorunlar ve Çözümler
+```yaml
+version: '3.8'
 
-### 1. Port Çakışmaları
-**Sorun**: Sistem Redis'i ve Nginx'i çalıştığı için port çakışmaları
-**Çözüm**: Docker-compose.yml'de portları değiştirdik:
-- Redis: 6379 → 6380
-- Nginx: 80 → 8081
+services:
+  api:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes: ["./backend:/app"]
+    command: bash -lc "pip install -U pip && pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports: ["8000:8000"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/kurban_cebimde
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - kurban-network
 
-### 2. Backend Framework Uyumsuzluğu
-**Sorun**: Docker-compose.yml FastAPI için yazılmış ama backend Flask kullanıyor
-**Çözüm**: Command'ları Flask için güncelledik
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=kurban_cebimde
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kurban-network
 
-### 3. Volume Mapping Sorunları
-**Sorun**: Backend volume mapping'i yanlış
-**Çözüm**: `./kurban-cebimde/backend:/app` olarak düzelttik
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kurban-network
 
----
+volumes:
+  postgres_data:
+  redis_data:
 
-## 🔒 Güvenlik Notları
+networks:
+  kurban-network:
+    driver: bridge
+```
 
-### ⚠️ Mevcut Güvenlik Sorunları
-1. **Şifreleme**: Şifreler plain text olarak saklanıyor
-2. **SQL Injection**: Raw SQL sorguları var
-3. **Input Validation**: Kullanıcı girdisi kontrol edilmiyor
-4. **HTTPS**: SSL sertifikası yok
+## 🧪 Test
 
-### 🛡️ Önerilen İyileştirmeler
-1. **Şifre Hash'leme**: BCrypt ile şifre hash'leme
-2. **Input Validation**: Pydantic ile validation
-3. **SQL Injection**: ORM kullanımı
-4. **HTTPS**: SSL sertifikası kurulumu
+### 🎯 **Yayın Test Senaryosu**
 
----
+Bu test senaryosu 1 bilgisayar ve 2 telefon ile gerçekleştirilir:
 
-## 📈 Performans ve Monitoring
+#### 📱 **Test Ortamı**
+- **Bilgisayar**: Admin panel kontrolü ve iletişim
+- **Telefon 1**: Normal kullanıcı (bağış yapan)
+- **Telefon 2**: Admin kullanıcı (yayın oluşturan)
 
-### Mevcut Monitoring
-- **Health Check**: `/health` endpoint'i
-- **Docker Stats**: `docker stats` komutu
-- **Log Monitoring**: `docker-compose logs`
+#### 🔄 **Test Adımları**
 
-### Önerilen Monitoring
-- **Prometheus**: Metrik toplama
-- **Grafana**: Dashboard'lar
-- **Sentry**: Hata takibi
-- **Uptime Monitoring**: Servis durumu
+**1. Kullanıcı Kaydı ve Bağış (Telefon 1)**
+```
+1. Normal kullanıcı olarak kayıt ol
+2. Giriş yap
+3. Sepete bağış ekle
+4. Bağışı onayla
+5. Ödeme sayfası atlanır → "Bağışınız alındı" mesajı
+```
 
----
+**2. Admin Kontrolü (Telefon 2)**
+```
+1. Admin olarak giriş yap
+2. Bağış yapan kullanıcıyı gör
+3. Kullanıcı için kesim yayını oluştur
+4. Kullanıcıya bildirim gönder: "1dk içerisinde yayınınız başlayacaktır"
+```
 
-## 🎯 Sonraki Adımlar
+**3. Yayın Süreci**
+```
+1. Kullanıcı yayına erken girerse → Geri sayım sayfası
+2. Yayın başladığında → 2dk süre verilir
+3. Hem kullanıcı hem admin panelden izler
+4. Yayın biter
+```
 
-### 🔥 Acil (Bu Hafta)
-1. **Şifre Hash'leme**: BCrypt implementasyonu
-2. **Input Validation**: Pydantic ile validation
-3. **Error Handling**: Sistematik hata yönetimi
-4. **API Documentation**: Swagger/OpenAPI
+#### ✅ **Beklenen Sonuçlar**
+- ✅ Admin panelde bağış verileri görünür
+- ✅ Kullanıcıya bildirim gelir
+- ✅ Yayın oluşturulur ve izlenebilir
+- ✅ Geri sayım sistemi çalışır
+- ✅ 2dk yayın süresi tamamlanır
 
-### ⚡ Orta Vadeli (2-3 Hafta)
-1. **PostgreSQL Migration**: SQLite'dan PostgreSQL'e geçiş
-2. **JWT Authentication**: Session yerine JWT token
-3. **Rate Limiting**: API istek sınırlaması
-4. **SSL Certificate**: HTTPS konfigürasyonu
+### 🚀 Hızlı Test
 
-### 📈 Uzun Vadeli (1-2 Ay)
-1. **Testing**: Unit ve integration testler
-2. **CI/CD**: GitHub Actions pipeline
-3. **Monitoring**: Prometheus + Grafana
-4. **Performance**: Optimizasyon çalışmaları
+```bash
+# Backend health check
+curl http://localhost:8000/health
 
----
+# Test endpoints
+curl http://localhost:8000/api/test/v1/
 
-## 📞 Destek ve İletişim
+# Notification test
+curl http://localhost:8000/api/notifications/v1/test
 
-**Proje Durumu**: ✅ Aktif ve Çalışır  
-**Sunucu Durumu**: ✅ Stabil  
-**Son Güncelleme**: 15 Ağustos 2025  
+# Certificate test
+curl http://localhost:8000/api/test/v1/certificate
+```
 
-### Sorun Giderme
-1. **Container Logları**: `docker-compose logs` ile kontrol
-2. **Port Çakışmaları**: `netstat -tulpn` ile kontrol
-3. **Disk Alanı**: `df -h` ile kontrol
-4. **Memory Kullanımı**: `free -h` ile kontrol
+### 📋 Postman Koleksiyonu
 
-### Detaylı Rapor
-Daha detaylı bilgi için `SUNUCU_DURUM_RAPORU.md` dosyasını inceleyin.
+```bash
+# Postman collection import et
+postman/KurbanCebimde_API.postman_collection.json
+postman/KurbanCebimde_Environment.postman_environment.json
+```
 
----
+### 🔧 Otomatik Test
+
+```bash
+# Backend testleri
+cd backend
+python -m pytest tests/ -v
+
+# Frontend testleri
+cd kurban-cebimde
+npm test
+
+# Integration testleri
+npm run test:integration
+```
+
+### 🚨 Error Testing
+
+```bash
+# Error test endpoints
+curl http://localhost:8000/api/error-test/v1/
+curl http://localhost:8000/api/error-test/v1/random
+curl http://localhost:8000/api/error-test/v1/rate_limit
+```
+
+## 📚 API Dokümantasyonu
+
+### 📖 Swagger UI
+- **URL**: `http://localhost:8000/docs`
+- **Özellikler**: Interactive API documentation, test endpoints
+
+### 📋 ReDoc
+- **URL**: `http://localhost:8000/redoc`
+- **Özellikler**: Clean, readable documentation
+
+### 🔗 API Endpoints
+
+#### 🔐 Authentication
+- `POST /api/v1/auth/register` - Kullanıcı kaydı
+- `POST /api/v1/auth/login` - Kullanıcı girişi
+- `GET /api/v1/auth/me` - Mevcut kullanıcı
+- `POST /api/v1/auth/refresh` - Token yenileme
+
+#### 🔔 Push Notifications
+- `POST /api/notifications/v1/send` - Tek bildirim
+- `POST /api/notifications/v1/send-bulk` - Toplu bildirim
+- `POST /api/notifications/v1/kurban` - Kurban bildirimi
+- `POST /api/notifications/v1/donation` - Bağış bildirimi
+- `POST /api/notifications/v1/stream` - Yayın bildirimi
+
+#### 📜 Certificates
+- `POST /api/certificates/v1/create` - Sertifika oluştur
+- `GET /api/certificates/v1/{id}` - Sertifika detayı
+- `GET /api/certificates/v1/user/{user_id}` - Kullanıcı sertifikaları
+- `GET /api/certificates/v1/verify/{code}` - Sertifika doğrula
+- `GET /api/certificates/v1/stats/overview` - İstatistikler
+
+#### 🧪 Test Endpoints
+- `GET /api/test/v1/` - Test root
+- `GET /api/test/v1/notification` - Bildirim testi
+- `GET /api/test/v1/certificate` - Sertifika testi
+- `GET /api/test/v1/integration` - Entegrasyon testi
+
+## 🔔 Push Bildirimleri
+
+### 📱 Expo Push Token Alma
+
+```typescript
+import * as Notifications from 'expo-notifications';
+
+// Push notification izni iste
+const { status } = await Notifications.requestPermissionsAsync();
+
+// Expo push token al
+const token = await Notifications.getExpoPushTokenAsync({
+  projectId: Constants.expoConfig?.extra?.eas?.projectId,
+});
+
+console.log('Expo Push Token:', token.data);
+```
+
+### 🔔 Bildirim Gönderme
+
+```typescript
+// Backend'den bildirim gönder
+const response = await fetch('/api/notifications/v1/send', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    to: 'ExponentPushToken[token]',
+    title: 'Test Bildirimi',
+    body: 'Bu bir test bildirimidir',
+    data: { type: 'test' }
+  })
+});
+```
+
+### 🎯 Bildirim Türleri
+
+- **Kurban Bildirimleri**: Kurban kesimi, organizasyon
+- **Bağış Bildirimleri**: Yeni bağışlar, bağış durumu
+- **Yayın Bildirimleri**: Canlı yayın başladı, yayın durumu
+- **Sistem Bildirimleri**: Güncellemeler, bakım
+
+## 📜 Sertifika Sistemi
+
+### 🏆 Sertifika Türleri
+
+- **Kurban Sertifikası**: Kurban kesimi katılımı
+- **Bağış Sertifikası**: Bağış katılımı
+- **Etkinlik Sertifikası**: Organizasyon katılımı
+
+### 🔍 Sertifika Doğrulama
+
+```typescript
+// QR kod ile doğrulama
+const response = await fetch(`/api/certificates/v1/verify/${verificationCode}`);
+const certificate = await response.json();
+
+if (certificate.success) {
+  console.log('Sertifika doğrulandı:', certificate.data);
+}
+```
+
+### 📄 PDF İndirme
+
+```typescript
+// Sertifika PDF'i indir
+const response = await fetch(`/api/certificates/v1/${certificateId}/download`);
+const pdfUrl = response.data.download_url;
+
+// PDF'i aç
+window.open(pdfUrl, '_blank');
+```
+
+## 🛡️ Güvenlik
+
+### 🔐 Authentication
+
+- JWT token tabanlı authentication
+- Refresh token mekanizması
+- Token expiration handling
+- Secure password hashing (bcrypt)
+
+### 🚦 Rate Limiting
+
+- IP tabanlı rate limiting
+- User tabanlı rate limiting
+- Redis + Memory fallback
+- Configurable limits
+
+### 🛡️ Input Validation
+
+- Pydantic model validation
+- SQL injection prevention
+- XSS protection
+- CORS configuration
+
+### 🔒 Security Headers
+
+- Request ID tracking
+- Rate limit headers
+- CORS headers
+- Security headers
+
+## 📊 Monitoring
+
+### 📈 Health Checks
+
+```bash
+# System health
+curl http://localhost:8000/health
+
+# Detailed status
+curl http://localhost:8000/api/monitor/status
+
+# System resources
+curl http://localhost:8000/api/monitor/system
+```
+
+### 📊 Metrics
+
+- Response times
+- Error rates
+- Rate limit hits
+- Database performance
+- Memory usage
+- CPU usage
+
+### 🔍 Logging
+
+- Structured logging
+- Request/Response logging
+- Error logging
+- Performance logging
+
+## 🚀 Deployment
+
+### 🐳 Docker Deployment
+
+```bash
+# Production build
+docker-compose -f docker-compose.prod.yml up -d
+
+# Scale services
+docker-compose up -d --scale api=3
+```
+
+### ☁️ Cloud Deployment
+
+- **AWS**: ECS, RDS, ElastiCache
+- **Google Cloud**: Cloud Run, Cloud SQL, Memorystore
+- **Azure**: Container Instances, Database, Cache
+
+### 🔧 Environment Setup
+
+```bash
+# Production environment
+export NODE_ENV=production
+export DEBUG=false
+export LOG_LEVEL=WARNING
+
+# Database
+export DATABASE_URL=postgresql://user:pass@prod-db:5432/kurban_cebimde
+
+# Redis
+export REDIS_URL=redis://prod-redis:6379
+```
+
+## 🤝 Katkıda Bulunma
+
+### 🔧 Development Setup
+
+```bash
+# Fork repository
+git clone https://github.com/your-username/kurban-cebimde.git
+cd kurban-cebimde
+
+# Create feature branch
+git checkout -b feature/amazing-feature
+
+# Make changes
+# Add tests
+# Update documentation
+
+# Commit changes
+git commit -m "Add amazing feature"
+
+# Push to branch
+git push origin feature/amazing-feature
+
+# Create Pull Request
+```
+
+### 📋 Contribution Guidelines
+
+1. Fork the repository
+2. Create feature branch
+3. Write tests
+4. Update documentation
+5. Submit pull request
+
+### 🧪 Testing Requirements
+
+- Unit tests for new features
+- Integration tests for API endpoints
+- Error handling tests
+- Performance tests
 
 ## 📄 Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır.
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+
+## 📞 Destek
+
+### 🆘 Yardım
+
+- **Email**: support@kurbancebimde.com
+- **GitHub Issues**: [Issues](https://github.com/your-org/kurban-cebimde/issues)
+- **Documentation**: [Docs](https://docs.kurbancebimde.com)
+
+### 📚 Kaynaklar
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Expo Documentation](https://docs.expo.dev/)
+- [React Native Documentation](https://reactnative.dev/docs/getting-started)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+
+### 🏆 Contributors
+
+- [@your-username](https://github.com/your-username) - Project Lead
+- [@contributor1](https://github.com/contributor1) - Backend Developer
+- [@contributor2](https://github.com/contributor2) - Frontend Developer
 
 ---
 
-**🎉 Kurban Cebimde projesi başarıyla sunucuya deploy edilmiştir!**
+<div align="center">
 
-Tüm servisler çalışır durumda ve geliştirme için hazır. Yukarıdaki komutları kullanarak projeyi başlatabilir ve geliştirebilirsiniz.
+**KurbanCebimde** ile modern kurban organizasyonu! 🐑✨
+
+[![GitHub stars](https://img.shields.io/github/stars/your-org/kurban-cebimde?style=social)](https://github.com/your-org/kurban-cebimde/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/your-org/kurban-cebimde?style=social)](https://github.com/your-org/kurban-cebimde/network)
+[![GitHub issues](https://img.shields.io/github/issues/your-org/kurban-cebimde)](https://github.com/your-org/kurban-cebimde/issues)
+
+</div>

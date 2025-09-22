@@ -2,21 +2,43 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// Proxy sadece gerektiğinde aç
+const useProxy = process.env.VITE_PROXY === '1' && process.env.NODE_ENV === 'development'
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@/': path.resolve(__dirname, './src/'),
     },
   },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // TypeScript hatalarını ignore et
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
+        warn(warning);
+      }
+    }
+  },
   server: {
-    port: 3001,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-    },
+    host: true,
+    port: 3000,
+    allowedHosts: ['localhost', '127.0.0.1', 'admin.kurbancebimde.com', 'admin-panel'],
+    ...(useProxy ? {
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/api/, '/api')
+        },
+      }
+    } : {})
   },
 })

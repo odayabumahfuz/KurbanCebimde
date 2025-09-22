@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { authAPI } from '../lib/api';
 
 const AuthContext = createContext(null);
@@ -17,7 +18,7 @@ export function AuthProvider({ children }) {
 
   const checkAuthStatus = async () => {
     try {
-      const storedToken = await AsyncStorage.getItem('auth_token');
+      const storedToken = await SecureStore.getItemAsync('access');
       if (storedToken) {
         setToken(storedToken);
         // Token ile kullanıcı bilgilerini al
@@ -34,13 +35,20 @@ export function AuthProvider({ children }) {
     try {
       const response = await authAPI.getCurrentUser();
       if (response.data) {
-        setUser(response.data);
+        setUser({ ...response.data, token: authToken });
         setIsAuthenticated(true);
       }
     } catch (error) {
       console.error('Kullanıcı bilgileri alınamadı:', error);
-      // Token geçersizse temizle
-      await logout();
+      // Token geçersizse temizle ama sonsuz döngüyü önle
+      if (error.response?.status === 401) {
+        // Sadece token'ları temizle, logout fonksiyonunu çağırma
+        await SecureStore.deleteItemAsync('access');
+        await SecureStore.deleteItemAsync('refresh');
+        setToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     }
   };
 
@@ -48,7 +56,7 @@ export function AuthProvider({ children }) {
     try {
       setIsLoading(true);
       const response = await authAPI.login({
-        username: phone, // Backend phone ile giriş yapıyor
+        phone: phone, // Backend phone ile giriş yapıyor
         password: password
       });
 
@@ -59,12 +67,14 @@ export function AuthProvider({ children }) {
         throw new Error('Giriş başarısız');
       }
 
-      // Token'ları sakla (RN tarafı)
-      await AsyncStorage.setItem('auth_token', String(access_token));
+      // Token'ları sakla (SecureStore kullan)
+      await SecureStore.setItemAsync('access', String(access_token));
       if (refresh_token) {
-        await AsyncStorage.setItem('refresh_token', String(refresh_token));
+        await SecureStore.setItemAsync('refresh', String(refresh_token));
       }
       setToken(String(access_token));
+      // Global erişim: CartContext backend'e post atsın
+      try { global.accessTokenForCart = String(access_token); } catch {}
 
       // Kullanıcı bilgilerini API'den çek
       await fetchCurrentUser(String(access_token));
@@ -86,6 +96,7 @@ export function AuthProvider({ children }) {
     try {
       setIsLoading(true);
       const response = await authAPI.register(userData);
+      // Kayıt sonrası otomatik giriş yapma, sadece başarı mesajı döndür
       return { success: true, data: response };
     } catch (error) {
       console.error('Kayıt hatası:', error);
@@ -100,8 +111,8 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('auth_token');
-      await AsyncStorage.removeItem('refresh_token');
+      await SecureStore.deleteItemAsync('access');
+      await SecureStore.deleteItemAsync('refresh');
       setToken(null);
       setUser(null);
       setIsAuthenticated(false);

@@ -1,12 +1,25 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
+import axios from 'axios';
+import Constants from 'expo-constants';
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
+  const API_BASE = (Constants?.expoConfig?.extra?.apiBase || Constants?.manifest?.extra?.apiBase || 'http://localhost:8000');
 
   function addItem(newItem) {
     setItems(prev => [...prev, newItem]);
+    // Backend'e de gönder
+    try {
+      const token = global?.accessTokenForCart || null;
+      axios.post(`${API_BASE}/api/v1/carts`, newItem, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        }
+      }).catch(() => {});
+    } catch {}
   }
 
   function removeItemById(id) {

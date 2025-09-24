@@ -42,16 +42,20 @@
       "favicon": "./assets/favicon.png"
     },
     "jsEngine": "jsc",
+    "newArchEnabled": false,
     "plugins": [
       [
         "expo-build-properties",
         {
           "ios": {
             "flipper": false,
-            "newArchEnabled": false
+            "deploymentTarget": "15.1"
           },
           "android": {
-            "newArchEnabled": false
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
           }
         }
       ],

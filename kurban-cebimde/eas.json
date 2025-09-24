@@ -1,9 +1,51 @@
 {
-  "cli": { "version": ">= 14.0.0" },
+  "cli": {
+    "version": ">= 5.9.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "gradleCommand": ":app:assembleDebug",
+        "buildType": "apk",
+        "credentialsSource": "local"
+      },
+      "ios": {
+        "buildConfiguration": "Debug",
+        "simulator": true,
+        "credentialsSource": "remote",
+        "image": "macos-sonoma-14.5-xcode-15.4"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "credentialsSource": "local"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "credentialsSource": "remote",
+        "image": "macos-sonoma-14.5-xcode-15.4"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "credentialsSource": "local"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "credentialsSource": "remote",
+        "image": "macos-sonoma-14.5-xcode-15.4"
+      }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }

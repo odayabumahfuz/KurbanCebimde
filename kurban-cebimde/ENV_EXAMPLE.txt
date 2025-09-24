@@ -1,0 +1,10 @@
+EXPO_PUBLIC_API_BASE=http://localhost:8000
+# Android emulator otomatik 10.0.2.2:8000 kullanır.
+# iOS/simulator için yerel ağ IP'nizi verin.
+# Production: https://api.kurbancebimde.com
+
+
+
+
+
+

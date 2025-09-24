@@ -9,6 +9,23 @@
 
 ---
 
+## 📝 Günlük İlerleme - 2025-09-08
+
+- **Expo bağlantı**: Tünel/LAN karışıklığı giderildi; `app.json -> extra.apiBase` ve `src/lib/api.js` fallback ile API tabanı net: `http://185.149.103.247:8000`.
+- **Backend (Flask - geçici)**: `login/register/me/logout` uçları çalışır; telefon normalizasyonu eklendi (\+90/0/905xx tüm formatlar tekilleştiriliyor).
+- **Veri akışı**: Yeni kayıtlar admin panele düşüyor; test kullanıcı adı DB’de “Oday Abumahfuz” olarak güncellendi.
+- **Navigasyon**: `RootTabs` + özel `TabBar` eklendi; alt menü aktif. Eksik `@react-navigation/bottom-tabs` kuruldu.
+- **Context sarmalayıcılar**: `AuthProvider` ve `CartProvider` köke alındı; `useAuth`/`useCart` hataları giderildi.
+
+### Kısa Yapılacaklar (Sıradaki)
+- **Profil verisi**: `AccountScreen` için backend’den isim/soyisim güncelleme endpoint’i (PATCH `/users/me`) ve uygulamada güncelleme akışı.
+- **Gerçek DB**: SQLite yerine `postgres` tablosu (docker-compose ile hazır) ve migration; mevcut kullanıcıları taşı.
+- **Oturum**: Access/refresh üretimi ve `SecureStore` ile kalıcı login; oturum yenileme akışı stabilize.
+- **Admin**: Kullanıcı listesinde “online/last_seen” gerçek veriye bağla; sayfalama/filtre ekle.
+- **Dağıtım**: Geliştirme aşamasında Nginx reverse proxy ile backend’i 8000’den yayınlama, SSL hazırlığı.
+
+---
+
 ## 🎯 Tamamlanan Özellikler
 
 ### 📱 Mobil Uygulama (React Native + Expo)

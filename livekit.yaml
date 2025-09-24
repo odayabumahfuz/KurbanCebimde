@@ -1,0 +1,11 @@
+port: 8080
+
+rtc:
+  tcp_port: 7880
+  use_external_ip: true
+
+keys:
+  api_key: ${LIVEKIT_API_KEY}
+  api_secret: ${LIVEKIT_API_SECRET}
+
+log_level: info

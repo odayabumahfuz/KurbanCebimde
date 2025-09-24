@@ -1,0 +1,880 @@
+{
+	"info": {
+		"_postman_id": "kurban-cebimde-api",
+		"name": "KurbanCebimde API Collection",
+		"description": "KurbanCebimde Backend API - Push Notifications & Certificates",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "kurban-cebimde"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"5551234567\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Kullanıcı girişi yap"
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Ahmet\",\n  \"surname\": \"Yılmaz\",\n  \"phone\": \"5551234567\",\n  \"email\": \"ahmet@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Yeni kullanıcı kaydı"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Mevcut kullanıcı bilgilerini getir"
+					},
+					"response": []
+				},
+				{
+					"name": "Save Push Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"expo_push_token\": \"ExponentPushToken[test_token_here]\",\n  \"platform\": \"android\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/user/push-token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"user",
+								"push-token"
+							]
+						},
+						"description": "Kullanıcının push token'ını kaydet"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints"
+		},
+		{
+			"name": "🔔 Push Notifications",
+			"item": [
+				{
+					"name": "Send Single Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"to\": \"ExponentPushToken[test_token_here]\",\n  \"title\": \"Test Bildirimi\",\n  \"body\": \"Bu bir test bildirimidir\",\n  \"data\": {\n    \"type\": \"test\",\n    \"timestamp\": 1640995200\n  },\n  \"sound\": \"default\",\n  \"channelId\": \"test_notifications\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/notifications/v1/send",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"v1",
+								"send"
+							]
+						},
+						"description": "Tek bir push bildirimi gönder"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Bulk Notifications",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"messages\": [\n    {\n      \"to\": \"ExponentPushToken[token1]\",\n      \"title\": \"Toplu Bildirim 1\",\n      \"body\": \"İlk bildirim\"\n    },\n    {\n      \"to\": \"ExponentPushToken[token2]\",\n      \"title\": \"Toplu Bildirim 2\",\n      \"body\": \"İkinci bildirim\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/notifications/v1/send-bulk",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"v1",
+								"send-bulk"
+							]
+						},
+						"description": "Toplu push bildirimi gönder"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Kurban Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"expo_token\": \"ExponentPushToken[test_token_here]\",\n  \"kurban_title\": \"2024 Kurban Organizasyonu\",\n  \"message\": \"Kurban kesimi başladı!\",\n  \"kurban_id\": \"kurban_123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/notifications/v1/kurban",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"v1",
+								"kurban"
+							]
+						},
+						"description": "Kurban ile ilgili bildirim gönder"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Donation Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"expo_token\": \"ExponentPushToken[test_token_here]\",\n  \"amount\": 500.0,\n  \"donor_name\": \"Ahmet Yılmaz\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/notifications/v1/donation",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"v1",
+								"donation"
+							]
+						},
+						"description": "Bağış bildirimi gönder"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Stream Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"expo_token\": \"ExponentPushToken[test_token_here]\",\n  \"stream_title\": \"Canlı Kurban Kesimi\",\n  \"message\": \"Yayın başladı!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/notifications/v1/stream",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"v1",
+								"stream"
+							]
+						},
+						"description": "Canlı yayın bildirimi gönder"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Notification",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/notifications/v1/test",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"v1",
+								"test"
+							]
+						},
+						"description": "Test bildirimi gönder"
+					},
+					"response": []
+				},
+				{
+					"name": "Notification Status",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/notifications/v1/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"notifications",
+								"v1",
+								"status"
+							]
+						},
+						"description": "Bildirim servisi durumu"
+					},
+					"response": []
+				}
+			],
+			"description": "Push notification endpoints"
+		},
+		{
+			"name": "📜 Certificates",
+			"item": [
+				{
+					"name": "Create Certificate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"kurban_id\": \"kurban_123\",\n  \"certificate_type\": \"kurban\",\n  \"title\": \"Kurban Katılım Sertifikası\",\n  \"description\": \"2024 Kurban Bayramı katılım sertifikası\",\n  \"metadata\": {\n    \"animal_type\": \"koyun\",\n    \"weight\": \"45kg\",\n    \"location\": \"Ankara\",\n    \"imam\": \"Mehmet Yılmaz\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/create",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"create"
+							]
+						},
+						"description": "Yeni sertifika oluştur"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Certificate",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/{{certificate_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"{{certificate_id}}"
+							]
+						},
+						"description": "Sertifika detaylarını getir"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Certificates",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/user/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"user",
+								"{{user_id}}"
+							]
+						},
+						"description": "Kullanıcının sertifikalarını getir"
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Certificate",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/verify/{{verification_code}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"verify",
+								"{{verification_code}}"
+							]
+						},
+						"description": "Sertifika doğrula"
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke Certificate",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/{{certificate_id}}/revoke",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"{{certificate_id}}",
+								"revoke"
+							]
+						},
+						"description": "Sertifikayı iptal et"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Certificates",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/?skip=0&limit=10&status=active&certificate_type=kurban",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								""
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "certificate_type",
+									"value": "kurban"
+								}
+							]
+						},
+						"description": "Tüm sertifikaları getir (filtreleme ile)"
+					},
+					"response": []
+				},
+				{
+					"name": "Certificate Stats",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/stats/overview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"stats",
+								"overview"
+							]
+						},
+						"description": "Sertifika istatistikleri"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Certificate PDF",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/{{certificate_id}}/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"{{certificate_id}}",
+								"download"
+							]
+						},
+						"description": "Sertifika PDF'ini indir"
+					},
+					"response": []
+				},
+				{
+					"name": "Sample Certificates",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/mock/sample",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"mock",
+								"sample"
+							]
+						},
+						"description": "Örnek sertifikaları getir"
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Mock Certificate",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/certificates/v1/mock/generate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"certificates",
+								"v1",
+								"mock",
+								"generate"
+							]
+						},
+						"description": "Mock sertifika oluştur"
+					},
+					"response": []
+				}
+			],
+			"description": "Certificate endpoints"
+		},
+		{
+			"name": "🧪 Test Endpoints",
+			"item": [
+				{
+					"name": "Test Root",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/test/v1/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"v1",
+								""
+							]
+						},
+						"description": "Test root endpoint"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Notification Service",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/test/v1/notification",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"v1",
+								"notification"
+							]
+						},
+						"description": "Bildirim servisi test"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Custom Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"expo_token\": \"ExponentPushToken[custom_test_token]\",\n  \"message\": \"Özel test mesajı\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/test/v1/notification/custom",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"v1",
+								"notification",
+								"custom"
+							]
+						},
+						"description": "Özel test bildirimi gönder"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Certificate Service",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/test/v1/certificate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"v1",
+								"certificate"
+							]
+						},
+						"description": "Sertifika servisi test"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Custom Certificate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"test_user_456\",\n  \"kurban_id\": \"test_kurban_789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/test/v1/certificate/custom",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"v1",
+								"certificate",
+								"custom"
+							]
+						},
+						"description": "Özel test sertifikası oluştur"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Integration",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/test/v1/integration",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"v1",
+								"integration"
+							]
+						},
+						"description": "Entegrasyon testi"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Services Status",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/test/v1/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"v1",
+								"status"
+							]
+						},
+						"description": "Tüm servislerin durumunu kontrol et"
+					},
+					"response": []
+				}
+			],
+			"description": "Test endpoints"
+		},
+		{
+			"name": "📊 System & Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Sistem sağlık kontrolü"
+					},
+					"response": []
+				},
+				{
+					"name": "Monitor Status",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/monitor/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitor",
+								"status"
+							]
+						},
+						"description": "Sistem durumu"
+					},
+					"response": []
+				},
+				{
+					"name": "Monitor System",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/monitor/system",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"monitor",
+								"system"
+							]
+						},
+						"description": "Sistem kaynakları"
+					},
+					"response": []
+				},
+				{
+					"name": "API Documentation",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/docs",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"docs"
+							]
+						},
+						"description": "Swagger API dokümantasyonu"
+					},
+					"response": []
+				},
+				{
+					"name": "ReDoc Documentation",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/redoc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"redoc"
+							]
+						},
+						"description": "ReDoc API dokümantasyonu"
+					},
+					"response": []
+				}
+			],
+			"description": "System and health endpoints"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "certificate_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "verification_code",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

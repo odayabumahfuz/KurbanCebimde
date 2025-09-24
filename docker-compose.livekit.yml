@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: kurbancebimde-livekit
+    restart: unless-stopped
+    command:
+      - --config
+      - /etc/livekit/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit/livekit.yaml
+    ports:
+      - "7880:7880" # WebRTC port
+      - "7881:7881" # Prometheus metrics
+      - "8080:8080" # HTTP/WebSocket port
+    environment:
+      - LIVEKIT_REDIS_HOST=kurbancebimde-redis-1
+      - LIVEKIT_REDIS_PORT=6379
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - LIVEKIT_HOST=185.149.103.247
+      - LIVEKIT_PORT=7880
+      - LIVEKIT_RTC_PORT=7880-7880
+      - LIVEKIT_LOG_LEVEL=debug
+    networks:
+      - kurbancebimde_default
+
+networks:
+  kurbancebimde_default:
+    external: true

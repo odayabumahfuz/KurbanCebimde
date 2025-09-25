@@ -289,3 +289,89 @@ Bu proje MIT lisansı altında lisanslanmıştır.
 Made with ❤️ by the KurbanCebimde Team
 
 </div>
+
+## 📅 Yarın İçin Yol Haritası (Detaylı)
+
+### 1) iOS (Xcode ile, EAS’siz) — TestFlight’a kadar
+
+- Hazırlık
+  - Xcode + CLT, Ruby/CocoaPods: `sudo gem install cocoapods`
+  - Expo prebuild gerekiyorsa: `npx expo prebuild -p ios`
+  - İzin metinleri (Info.plist):
+    - `NSCameraUsageDescription`: “Canlı yayın doğrulaması için kamera erişimi.”
+    - `NSMicrophoneUsageDescription`: “Canlı yayın için mikrofon erişimi.”
+- Proje açılışı
+  - `cd kurban-cebimde/ios && pod install && open KurbanCebimde.xcworkspace`
+  - Target seç → Deployment Target ≥ iOS 14
+- Kimlik ve imzalama
+  - Signing & Capabilities → Team, Bundle ID (örn. `com.kurbancebimde.app`)
+  - `General → Version` ve `Build` artır
+- Çevresel ayarlar
+  - Prod `API_BASE` ve `LIVEKIT_WS` değerlerini prod’a çek (Config/Constants)
+  - HTTP gerekiyorsa sadece staging için ATS exception (geçici)
+- Cihazda test (Release)
+  - Gerçek cihazda kamera/mikrofon ve yayın izleme testi
+- Arşiv ve dağıtım
+  - Product → Archive → Distribute → App Store Connect (Upload)
+  - App Store Connect’te build → Internal Testers’a aç
+- Hızlı kontrol listesi
+  - [ ] İzin prompt’ları düzgün
+  - [ ] LiveKit oda bağlantısı (staging/prod)
+  - [ ] İkon/LaunchScreen güncel
+
+### 2) Android (APK, EAS’siz) — Gradle release
+
+- Hazırlık
+  - JDK 17, Android SDK; `sdkmanager --licenses` kabul
+  - Keystore oluştur (yoksa):
+    - `keytool -genkey -v -keystore kurban-release.keystore -alias kurban -keyalg RSA -keysize 2048 -validity 36500`
+  - `android/app/` içine koy; `gradle.properties` şifreleri ayarla
+- build.gradle
+  - `signingConfigs.release` + `buildTypes.release.signingConfig signingConfigs.release`
+  - İzinler: `CAMERA`, `RECORD_AUDIO`
+- Çevresel ayarlar
+  - Prod `API_BASE` ve `LIVEKIT_WS` değerleri
+  - Gerekirse `network_security_config.xml` ile staging’e özel HTTP istisnası
+- Build
+  - `cd kurban-cebimde/android && ./gradlew clean assembleRelease`
+  - Çıktı: `android/app/build/outputs/apk/release/app-release.apk`
+  - Yükleme: `adb install -r app-release.apk`
+- Hızlı kontrol listesi
+  - [ ] Açılışta crash yok
+  - [ ] Kamera/mikrofon izinleri
+  - [ ] Yayın izleme, ağ erişimi OK
+
+### 3) Web (kc-web) — içerik + yayın
+
+- Bilgi mimarisi
+  - Statik sayfalar: `index.html`, `donate.html`, `streams.html`, `cart.html`, `profile.html`, `login.html`, `register.html`
+  - Ortak stil: `kc-web/styles.css` (tasarım buradan ilerleyecek)
+- İçerik tamamlama
+  - Mobildeki metin ve akışları sayfalara birebir taşı
+  - Header/footer logo ve linkler eklendi; favicon: `kurbancebimdeYlogo.png`
+- Yayınlama (Nginx)
+  - `nginx.conf` kök: `/app/kc-web` ve cache başlıkları mevcut
+  - Docker compose prod: `docker compose -f docker-compose.prod.yml up -d nginx`
+- Kontrol listesi
+  - [ ] Tüm sayfalarda linkler çalışıyor
+  - [ ] 404 sayfası (opsiyonel)
+  - [ ] Mobil uyumluluk (min. 360px)
+
+### 4) Staging/Prod akışı (öneri)
+
+- Git akışı
+  - `main` = prod, `dev` = staging; feature branch → PR
+- CI/CD
+  - PR’da Preview (Vercel veya staging sunucu)
+  - `dev` push → staging deploy; `main` merge → prod deploy
+- Blue‑green (Docker + Caddy/Nginx)
+  - `web_blue:3000` / `web_green:3001` iki upstream
+  - Yeni sürümü boş renge kur → healthcheck → reverse_proxy upstream değiştir → reload
+  - Rollback: upstream’i eski renge çevir, reload
+- Dikkat
+  - Env ayrımı: `NEXT_PUBLIC_API_BASE`, `LIVEKIT_WS`
+  - DB migrasyonları: önce staging, sonra prod (Alembic)
+  - Cache/CDN purge: sadece gerekli yollar; asset’ler versiyonlu
+  - Sağlık: `/health` smoke test
+  - Feature flag: riskli parçalar kademeli
+

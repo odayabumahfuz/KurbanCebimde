@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kayıt Ol – Kurban Cebimde</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="page">
+      <div class="bg-pattern" aria-hidden="true"></div>
+      <header class="header reveal">
+        <div class="brand">
+          <picture>
+            <source media="(min-width: 920px)" srcset="./kurbancebimdelogo1.png">
+            <img class="brand-logo" src="./kurbancebimdelogo.png" alt="Kurban Cebimde">
+          </picture>
+          <strong style="margin-left:8px">Kurban Cebimde</strong>
+        </div>
+        <nav class="nav" aria-label="Birincil">
+          <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" title="Menü">☰</button>
+          <ul id="nav-menu" class="nav-list">
+            <li><a href="./index.html">Ana Sayfa</a></li>
+            <li><a href="./donate.html">Bağış Yap</a></li>
+            <li><a href="./streams.html">Canlı Yayınlar</a></li>
+            <li><a href="./cart.html">Sepet</a></li>
+            <li><a href="./profile.html">Profil</a></li>
+            <li><a href="./login.html">Giriş</a></li>
+            <li><a href="./register.html">Kayıt</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <main class="content">
+        <section class="hero">
+          <h1 class="title reveal stagger-text">Kayıt Ol</h1>
+        </section>
+
+        <section class="updates reveal" style="max-width:520px">
+          <form>
+            <label>Ad Soyad<br><input placeholder="Ad Soyad" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)"></label>
+            <div style="height:10px"></div>
+            <label>E-posta<br><input type="email" placeholder="mail@ornek.com" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)"></label>
+            <div style="height:10px"></div>
+            <label>Şifre<br><input type="password" placeholder="••••••••" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)"></label>
+            <div style="display:flex;gap:10px;margin-top:16px">
+              <button type="button" class="badge" style="background:var(--primary)">Kayıt Ol</button>
+              <a href="./login.html" class="badge" style="background:#ffffff10;color:var(--text)">Giriş</a>
+            </div>
+          </form>
+        </section>
+      </main>
+
+      <footer class="footer reveal">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <picture>
+              <source media="(min-width: 920px)" srcset="./kurbancebimdelogo1.png">
+              <img class="footer-logo" src="./kurbancebimdelogo.png" alt="Kurban Cebimde logo">
+            </picture>
+          </div>
+          <div class="footer-rights"><p>© <span id="y"></span> Kurban Cebimde</p></div>
+        </div>
+      </footer>
+    </div>
+    <script>
+      document.getElementById('y').textContent = new Date().getFullYear();
+      const toggle = document.querySelector('.nav-toggle');
+      const menu = document.getElementById('nav-menu');
+      if (toggle && menu){
+        toggle.addEventListener('click', () => {
+          const open = toggle.getAttribute('aria-expanded') === 'true';
+          toggle.setAttribute('aria-expanded', String(!open));
+          menu.classList.toggle('open', !open);
+        });
+      }
+    </script>
+  </body>
+  </html>
+
+

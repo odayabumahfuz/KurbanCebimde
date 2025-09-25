@@ -132,7 +132,9 @@ import {
   TrendingDown
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Production'da domain origin + API prefix kullan, env yoksa fallback
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+  || `${window.location.origin}`;
 
 interface SystemInfo {
   cpu_usage: string;

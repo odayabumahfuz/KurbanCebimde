@@ -1,5 +1,5 @@
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// API Configuration: env yoksa domain origin'i kullan
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) || window.location.origin;
 
 // API Client
 export class ApiClient {
@@ -158,9 +158,10 @@ export class ApiClient {
 
   // WebSocket Connection
   createWebSocketConnection(userId?: number) {
+    const base = window.location.origin.replace(/^http/, 'ws');
     const wsUrl = userId 
-      ? `ws://localhost:8000/api/v1/ws/${userId}`
-      : 'ws://localhost:8000/api/v1/ws/admin';
+      ? `${base}/api/v1/ws/${userId}`
+      : `${base}/api/v1/ws/admin`;
     
     return new WebSocket(wsUrl);
   }

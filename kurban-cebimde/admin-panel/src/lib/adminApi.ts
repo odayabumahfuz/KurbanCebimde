@@ -1,12 +1,12 @@
 // Admin API client
-// Tek otorite: VITE_API_BASE environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE as string;
+// API Base URL: .env üzerinden gelmezse domain'e göre fallback
+const ENV_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || undefined;
 const ADMIN_API_PREFIX = '/admin/v1';
 
-// API base URL kontrolü
-if (!API_BASE_URL || !/^https?:\/\//.test(API_BASE_URL)) {
-  throw new Error('VITE_API_BASE mutlaka mutlak bir URL olmalı (http/https ile).');
-}
+// ENV yoksa veya hatalıysa, mevcut origin üzerinden /api/admin/v1 kullan
+const API_BASE_URL = ENV_API_BASE && /^https?:\/\//.test(ENV_API_BASE)
+  ? ENV_API_BASE
+  : `${window.location.origin}/api${ADMIN_API_PREFIX}`;
 
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
 console.log('🔧 VITE_PROXY:', import.meta.env.VITE_PROXY);

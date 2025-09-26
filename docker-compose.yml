@@ -110,7 +110,7 @@ services:
     volumes: ["./kurban-cebimde/admin-panel:/app"]
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - VITE_API_BASE=http://185.149.103.247:8000/api/admin/v1
       - VITE_PROXY=0

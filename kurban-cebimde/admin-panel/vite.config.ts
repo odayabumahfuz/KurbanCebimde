@@ -27,9 +27,10 @@ export default defineConfig({
     }
   },
   server: {
-    host: true,
+    host: '0.0.0.0',
     port: 3000,
-    allowedHosts: ['localhost', '127.0.0.1', 'admin.kurbancebimde.com', 'admin-panel'],
+    strictPort: true,
+    allowedHosts: 'all',
     ...(useProxy ? {
       proxy: {
         '/api': {

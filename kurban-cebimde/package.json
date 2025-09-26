@@ -63,7 +63,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@babel/plugin-transform-template-literals": "^7.27.1",
-    "@types/react": "~19.1.10",
+    "@types/react": "^18.2.6",
     "expo-build-properties": "~1.0.9",
     "expo-dev-client": "~6.0.12",
     "typescript": "~5.9.2"

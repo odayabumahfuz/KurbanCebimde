@@ -41,7 +41,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "jsEngine": "jsc",
+    "jsEngine": "hermes",
     "newArchEnabled": false,
     "plugins": [
       [

@@ -6,6 +6,11 @@
   "build": {
     "internal": {
       "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "credentialsSource": "remote"
+      },
       "ios": {
         "simulator": false
       }

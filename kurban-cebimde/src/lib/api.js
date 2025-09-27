@@ -54,7 +54,7 @@ export const adminAPI = {
 
 // LiveKit API için ayrı instance - Backend'deki admin endpoint'ini kullan
 export const livekitAPI = axios.create({
-  baseURL: `${BASE}/api/admin/v1`,
+  baseURL: `${API_BASE.replace('/api/v1', '/api/admin/v1')}`,
   timeout: 60000
 });
 
@@ -405,7 +405,7 @@ export const adminStreamsAPI = {
 // Health check
 export const healthCheck = async () => {
   try {
-    const response = await axios.get(`${BASE}/health`, { timeout: 5000 });
+    const response = await axios.get(`${API_BASE.replace('/api/v1', '')}/health`, { timeout: 5000 });
     return { success: true, data: response.data };
   } catch (error) {
     return { 

@@ -20,6 +20,7 @@ const DEV_BASE = (() => {
 })();
 
 const BASE = __DEV__ ? 'http://185.149.103.247:8000' : 'https://api.kurbancebimde.com';
+console.log('🔍 DEBUG MODE - API BASE:', BASE);
 
 console.log('🔗 API BASE =', `${BASE}/api/v1`);
 
@@ -213,6 +214,7 @@ export const authAPI = {
         email: userData.email || null, 
         password: userData.password 
       };
+      console.log('🔍 REGISTER REQUEST:', payload);
       const res = await api.post("/auth/register", payload, {
         headers: { "Content-Type": "application/json" },
       });
@@ -227,8 +229,9 @@ export const authAPI = {
       return res.data;
 
     } catch (err) {
+      console.log("❌ REGISTER_ERROR:", err);
       // Artık interceptor detay bastı; burada sadece kullanıcıya mesaj ver
-      throw new Error("Kayıt yapılamadı");
+      throw err; // Orijinal hatayı fırlat
     }
   },
   
@@ -246,6 +249,7 @@ export const authAPI = {
         phoneOrEmail: phone, // Backend'de phoneOrEmail field'ı bekliyor
         password: credentials?.password || ''
       };
+      console.log('🔍 LOGIN REQUEST:', payload);
 
       const res = await api.post('/auth/login', payload, {
         headers: {

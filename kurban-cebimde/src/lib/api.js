@@ -216,6 +216,8 @@ export const authAPI = {
         password: userData.password 
       };
       console.log('🔍 REGISTER REQUEST:', payload);
+      console.log('🔍 API BASE URL:', api.defaults.baseURL);
+      console.log('🔍 FULL URL:', `${api.defaults.baseURL}/auth/register`);
       const res = await api.post("/auth/register", payload, {
         headers: { "Content-Type": "application/json" },
       });

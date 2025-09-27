@@ -19,8 +19,8 @@ const DEV_BASE = (() => {
   return `http://${host || '127.0.0.1'}:8000`;
 })();
 
-// Force development API for now
-const API_BASE = 'http://185.149.103.247:8000/api/v1';
+// Use environment variable or fallback
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE ? `${process.env.EXPO_PUBLIC_API_BASE}/api/v1` : 'http://185.149.103.247:8000/api/v1';
 const ENV = 'development';
 
 console.log('🌐 API_BASE:', API_BASE);

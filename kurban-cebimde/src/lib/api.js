@@ -19,8 +19,9 @@ const DEV_BASE = (() => {
   return `http://${host || '127.0.0.1'}:8000`;
 })();
 
-const API_BASE = Constants.expoConfig?.extra?.apiBase || 'http://185.149.103.247:8000/api/v1';
-const ENV = Constants.expoConfig?.extra?.env || 'development';
+// Force development API for now
+const API_BASE = 'http://185.149.103.247:8000/api/v1';
+const ENV = 'development';
 
 console.log('🌐 API_BASE=', API_BASE, 'ENV=', ENV);
 console.log('🔍 Constants.expoConfig?.extra:', Constants.expoConfig?.extra);

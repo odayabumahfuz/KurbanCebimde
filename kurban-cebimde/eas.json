@@ -6,6 +6,7 @@
   "build": {
     "internal": {
       "distribution": "internal",
+      "env": { "NODE_ENV": "development" },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",

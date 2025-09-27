@@ -19,8 +19,6 @@ const DEV_BASE = (() => {
   return `http://${host || '127.0.0.1'}:8000`;
 })();
 
-import Constants from 'expo-constants';
-
 const API_BASE = Constants.expoConfig?.extra?.apiBase || 'http://185.149.103.247:8000/api/v1';
 const ENV = Constants.expoConfig?.extra?.env || 'development';
 

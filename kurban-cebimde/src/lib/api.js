@@ -23,7 +23,8 @@ const DEV_BASE = (() => {
 const API_BASE = 'http://185.149.103.247:8000/api/v1';
 const ENV = 'development';
 
-console.log('🌐 API_BASE=', API_BASE, 'ENV=', ENV);
+console.log('🌐 API_BASE:', API_BASE);
+console.log('🌐 ENV:', ENV);
 console.log('🔍 Constants.expoConfig?.extra:', Constants.expoConfig?.extra);
 console.log('🔍 Constants.expoConfig:', Constants.expoConfig);
 

@@ -25,6 +25,7 @@ const ENV = 'development';
 
 console.log('🌐 API_BASE=', API_BASE, 'ENV=', ENV);
 console.log('🔍 Constants.expoConfig?.extra:', Constants.expoConfig?.extra);
+console.log('🔍 Constants.expoConfig:', Constants.expoConfig);
 
 export const api = axios.create({
   baseURL: API_BASE,

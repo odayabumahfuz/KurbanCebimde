@@ -19,19 +19,21 @@ const DEV_BASE = (() => {
   return `http://${host || '127.0.0.1'}:8000`;
 })();
 
-const BASE = __DEV__ ? 'http://185.149.103.247:8000' : 'https://api.kurbancebimde.com';
-console.log('🔍 DEBUG MODE - API BASE:', BASE);
+import Constants from 'expo-constants';
 
-console.log('🔗 API BASE =', `${BASE}/api/v1`);
+const API_BASE = Constants.expoConfig?.extra?.apiBase || 'http://185.149.103.247:8000/api/v1';
+const ENV = Constants.expoConfig?.extra?.env || 'development';
+
+console.log('🌐 API_BASE=', API_BASE, 'ENV=', ENV);
 
 export const api = axios.create({
-  baseURL: `${BASE}/api/v1`,
+  baseURL: API_BASE,
   timeout: 60000 // 60 saniye timeout
 });
 
 // Admin API için ayrı instance
 export const adminApi = axios.create({
-  baseURL: `${BASE}/api/admin/v1`,
+  baseURL: API_BASE.replace('/api/v1', '/api/admin/v1'),
   timeout: 60000
 });
 

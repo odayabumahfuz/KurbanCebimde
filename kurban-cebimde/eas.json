@@ -4,22 +4,10 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "internal": {
-      "distribution": "internal",
-      "env": { "NODE_ENV": "development" },
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease",
-        "credentialsSource": "remote"
-      },
-      "ios": {
-        "simulator": false
-      }
-    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "NODE_ENV": "development" },
+      "env": { "APP_ENV": "development" },
       "android": {
         "gradleCommand": ":app:assembleDebug",
         "buildType": "apk",
@@ -34,11 +22,25 @@
     },
     "preview": {
       "distribution": "internal",
-      "env": { "NODE_ENV": "production" },
+      "env": { "APP_ENV": "preview" },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",
-        "credentialsSource": "local"
+        "credentialsSource": "remote"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "credentialsSource": "remote",
+        "image": "macos-sequoia-15.0-xcode-16.0"
+      }
+    },
+    "staging": {
+      "distribution": "internal",
+      "env": { "APP_ENV": "staging" },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "credentialsSource": "remote"
       },
       "ios": {
         "buildConfiguration": "Release",
@@ -47,11 +49,11 @@
       }
     },
     "production": {
-      "env": { "NODE_ENV": "production" },
+      "env": { "APP_ENV": "production" },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",
-        "credentialsSource": "local"
+        "credentialsSource": "remote"
       },
       "ios": {
         "buildConfiguration": "Release",

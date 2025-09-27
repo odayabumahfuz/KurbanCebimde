@@ -19,14 +19,13 @@ const DEV_BASE = (() => {
   return `http://${host || '127.0.0.1'}:8000`;
 })();
 
-// Use environment variable or fallback
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE ? `${process.env.EXPO_PUBLIC_API_BASE}/api/v1` : 'http://185.149.103.247:8000/api/v1';
-const ENV = 'development';
+// Use Constants from app.config.ts
+const API_BASE = Constants.expoConfig?.extra?.apiBase || 'http://10.0.2.2:8000/api/v1';
+const ENV = Constants.expoConfig?.extra?.env || 'development';
 
-console.log('🌐 API_BASE:', API_BASE);
-console.log('🌐 ENV:', ENV);
+console.log('🌐 ENV =', ENV);
+console.log('🌐 API_BASE =', API_BASE);
 console.log('🔍 Constants.expoConfig?.extra:', Constants.expoConfig?.extra);
-console.log('🔍 Constants.expoConfig:', Constants.expoConfig);
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -121,7 +120,7 @@ livekitAPI.interceptors.response.use(
 // Request interceptor - her istekte token ekle
 api.interceptors.request.use(
   async (config) => {
-    console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    console.log(`➡️ ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     
     // Token varsa header'a ekle (SecureStore kullan)
     try {
@@ -165,12 +164,16 @@ function logAxiosError(err) {
 // Response interceptor - 401 gelirse refresh token dene
 api.interceptors.response.use(
   (response) => {
-    console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    console.log(`✅ HTTP ${response.status} ${response.config?.url}`);
     return response;
   },
   async (error) => {
     // Detaylı error logging
-    try { logAxiosError(error); } catch {}
+    if (error.response) {
+      console.log(`❌ HTTP ${error.response.status} ${error.config?.url}`, error.response.data);
+    } else {
+      console.log(`❌ NET ${error.code} ${error.message} ${error.config?.baseURL}`);
+    }
     
     const status = error?.response?.status;
     if (status === 401) {
@@ -219,8 +222,6 @@ export const authAPI = {
         password: userData.password 
       };
       console.log('🔍 REGISTER REQUEST:', payload);
-      console.log('🔍 API BASE URL:', api.defaults.baseURL);
-      console.log('🔍 FULL URL:', `${api.defaults.baseURL}/auth/register`);
       const res = await api.post("/auth/register", payload, {
         headers: { "Content-Type": "application/json" },
       });

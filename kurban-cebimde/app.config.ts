@@ -4,11 +4,11 @@ const ENV = process.env.APP_ENV ?? 'development';
 
 const CONFIGS = {
   development: { 
-    API_BASE: 'http://185.149.103.247:8000/api/v1',
-    API_SERVER_URL: 'http://185.149.103.247:8000'
+    API_BASE: 'http://10.0.2.2:8000/api/v1',  // Android emulator
+    API_SERVER_URL: 'http://10.0.2.2:8000'
   },
   preview: { 
-    API_BASE: 'http://185.149.103.247:8000/api/v1',
+    API_BASE: 'http://185.149.103.247:8000/api/v1',  // Backend IP
     API_SERVER_URL: 'http://185.149.103.247:8000'
   },
   staging: { 

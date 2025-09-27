@@ -66,6 +66,9 @@
     "typescript": "~5.9.2"
   },
   "expo": {
+    "install": {
+      "exclude": ["react", "react-dom", "react-native", "react-native-reanimated", "@types/react"]
+    },
     "doctor": {
       "reactNativeDirectoryCheck": {
         "exclude": [

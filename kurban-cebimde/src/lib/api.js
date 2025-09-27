@@ -23,6 +23,7 @@ const API_BASE = Constants.expoConfig?.extra?.apiBase || 'http://185.149.103.247
 const ENV = Constants.expoConfig?.extra?.env || 'development';
 
 console.log('🌐 API_BASE=', API_BASE, 'ENV=', ENV);
+console.log('🔍 Constants.expoConfig?.extra:', Constants.expoConfig?.extra);
 
 export const api = axios.create({
   baseURL: API_BASE,

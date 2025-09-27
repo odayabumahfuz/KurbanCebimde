@@ -42,7 +42,7 @@
       "favicon": "./assets/favicon.png"
     },
     "jsEngine": "hermes",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "plugins": [
       [
         "expo-build-properties",

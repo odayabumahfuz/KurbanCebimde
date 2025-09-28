@@ -38,9 +38,9 @@ const StreamViewerPage: React.FC = () => {
         const loginData = await loginResponse.json();
         const adminToken = loginData.access_token;
 
-        // Stream token al
-        const response = await fetch(`http://185.149.103.247:8000/api/admin/v1/streams/${streamId}/token`, {
-          method: 'POST',
+        // Stream token al - README uyumlu endpoint
+        const response = await fetch(`http://185.149.103.247:8000/api/livekit/v1/streams/${streamId}/token?role=subscriber`, {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${adminToken}`,
             'Content-Type': 'application/json',

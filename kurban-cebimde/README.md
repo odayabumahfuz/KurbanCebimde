@@ -453,6 +453,356 @@ curl -i https://api-stg.kurbancebimde.com/api/v1/healthz
 
 ---
 
+## Test Senaryoları ve Checklist
+
+### 1) Ortam & Giriş – Temel Sağlık
+
+#### TS-01 – Health Check
+**Amaç**: API ve sürüm hazır mı?
+
+**Önkoşul**: Staging domain (HTTPS), backend ayakta.
+
+**Adımlar**:
+- Tarayıcı/terminal: `GET https://api-stg.../api/v1/healthz`
+- `GET https://api-stg.../api/v1/version`
+
+**Beklenen**: `{"status":"ok"}` + versiyon/git-sha dönmeli (200).
+
+**Kanıt**: Ekran görüntüsü + cURL çıktısı.
+
+#### TS-02 – Mobil ENV Doğrulama
+**Amaç**: APK/IPA doğru API URL'ine mi vuruyor?
+
+**Önkoşul**: Staging build (APP_ENV=staging).
+
+**Adımlar**:
+- App açılışında console.log ile ENV ve apiUrl logla.
+- Android: `adb logcat | find "API_BASE"` / iOS: Xcode console.
+
+**Beklenen**: `ENV=staging`, `apiUrl=https://api-stg.../api/v1`.
+
+**Kanıt**: Log ekran görüntüsü.
+
+#### TS-03 – CORS & HTTPS
+**Amaç**: Panel → API çağrıları sorunsuz mu?
+
+**Adımlar**: Panelden giriş sayfasını aç, Network tab'da XHR'leri izle.
+
+**Beklenen**: Tüm XHR'ler 200/204/201, CORS hatası yok.
+
+**Kanıt**: DevTools screenshot.
+
+#### TS-04 – Auth: OTP Login (Kullanıcı)
+**Amaç**: OTP akışı çalışıyor mu?
+
+**Adımlar**: Kullanıcı uygulamasında telefon gir → OTP gönder → doğrula.
+
+**Beklenen**: 1) SMS geliyor 2) app token alıyor 3) `/auth/me` 200.
+
+**Kanıt**: App ekranı + SMS ekran görüntüsü + `/auth/me` log.
+
+#### TS-05 – Auth: Admin Login
+**Amaç**: Admin app ve panel giriş.
+
+**Adımlar**: Admin app'te ve panelde admin kullanıcıyla login.
+
+**Beklenen**: `role=admin` ile yetkili ekranlar açılır.
+
+**Kanıt**: Ekran görüntüleri.
+
+### 2) Yayın – Publish & Watch
+
+#### TS-06 – Yayın Oluştur (Admin Panel)
+**Amaç**: Stream kaydı oluşuyor mu?
+
+**Adımlar**: Panel → "Yayın Oluştur" (bağış/animal seç).
+
+**Beklenen**: `/streams` 201; panel listede "scheduled/draft".
+
+**Kanıt**: Panel ekran + Network log.
+
+#### TS-07 – Yayın Başlat (Admin Mobil – Publisher)
+**Amaç**: Admin app oda token alıp yayına girebiliyor mu?
+
+**Adımlar**:
+- Admin app'te oluşturulan yayına gir → "Başlat".
+- `/streams/{id}/start` → token → LiveKit'e bağlan.
+
+**Beklenen**: 1–3 sn içinde kamera açılır, "LIVE" durumu; `/streams/{id}` status=live.
+
+**Kanıt**: Ekran kaydı + backend log (room started).
+
+#### TS-08 – Yayın İzleme (Kullanıcı App + Panel)
+**Amaç**: Subscriber olarak aynı odayı izleme.
+
+**Adımlar**:
+- Kullanıcı app'te "Canlı Yayınlar" → yayına gir.
+- Panelde aynı yayını izleme bileşeni aç.
+
+**Beklenen**: Her iki tarafta da 2–3 sn'de görüntü/ses. Drop-frame < %3.
+
+**Kanıt**: İki ekrandan kısa video + LiveKit dashboard metriki (varsa).
+
+### 3) Bildirim & SMS
+
+#### TS-09 – Push Token Kaydı
+**Amaç**: Cihaza push token alınıyor ve backend'e kaydediliyor mu?
+
+**Adımlar**: App ilk açılış → izin ver → token backend'e POST.
+
+**Beklenen**: `device_tokens` tablosunda kayıt.
+
+**Kanıt**: DB ekranı/endpoint çıktısı.
+
+#### TS-10 – "Yayın 1 dk içinde başlıyor" Push
+**Amaç**: Planlanan yayından 1 dk önce push.
+
+**Adımlar**:
+- `scheduled_at = now+2dk` yayını oluştur.
+- Cron/job tetikle (manuel endpoint olabilir).
+
+**Beklenen**: Kullanıcı app'te push bildirimi görünsün; tıklayınca yayına gitsin (deep link).
+
+**Kanıt**: Bildirim screenshot + app navigation videosu.
+
+#### TS-11 – NetGSM SMS – OTP
+**Amaç**: OTP SMS geliyor mu (sandbox/gerçek hat)?
+
+**Adımlar**: OTP iste → gelen kodla doğrula.
+
+**Beklenen**: NetGSM response 200; SMS ulaştı.
+
+**Kanıt**: SMS ekran görüntüsü + backend log.
+
+#### TS-12 – NetGSM SMS – Yayın Hatırlatma
+**Amaç**: Şablonlu SMS (donation_id, zaman).
+
+**Adımlar**: `/notify/stream-1min` tetikle.
+
+**Beklenen**: Mesaj metni doğru değişkenlerle gelmeli.
+
+**Kanıt**: SMS görüntüsü + payload log.
+
+### 4) Ödeme (Sandbox) + Webhook
+
+PSP olarak hangisini seçtiysek (ör. iyzico/PayTR/EsnekPOS/Stripe) test kartlarıyla ilerle.
+
+#### TS-13 – Checkout Link Oluşturma
+**Amaç**: Hosted Payment Page linki alınıyor mu?
+
+**Adımlar**: App → "Bağış Yap" → `/donations/checkout`.
+
+**Beklenen**: 200 + `payment_url`.
+
+**Kanıt**: Network log.
+
+#### TS-14 – Ödeme Başarılı
+**Amaç**: HPP'de test kartla başarı.
+
+**Adımlar**: `payment_url`'ü aç → test kart → success → redirect → webhook gelir.
+
+**Beklenen**: `payments.status=paid`, `donations.status=paid`.
+
+**Kanıt**: PSP panel kayıtları + backend DB durumu + app "Bağışlarım"da paid.
+
+#### TS-15 – Ödeme Başarısız
+**Amaç**: Fail akışı ve UI hata mesajı.
+
+**Adımlar**: Hatalı kart/3D fail.
+
+**Beklenen**: `payments.status=failed`, kullanıcıya anlaşılır uyarı.
+
+**Kanıt**: UI ekran + webhook/DB log.
+
+#### TS-16 – Webhook Güvenliği
+**Amaç**: İmza doğrulama çalışıyor mu?
+
+**Adımlar**: Yanlış imza ile webhook dene (Postman).
+
+**Beklenen**: 401/403; state değişmemeli.
+
+**Kanıt**: Log + DB değişmedi screen.
+
+### 5) Medya Yükleme & Sertifika PDF
+
+#### TS-17 – Presigned Upload (Admin App)
+**Amaç**: Video/görsel doğrudan S3'e yükleniyor mu?
+
+**Adımlar**:
+- Admin app → "Medya Ekle" → `/media/presign`.
+- Dönen URL ile PUT/POST upload.
+- `/donations/{id}/media/attach`.
+
+**Beklenen**: S3 objesi oluşur; kullanıcı tarafında listede görünür.
+
+**Kanıt**: S3 console + app listesi ekranı.
+
+#### TS-18 – Büyük Dosya / Yavaş Ağ
+**Amaç**: 50–100MB dosya yavaş ağda retry/başarı.
+
+**Adımlar**: Android Emulator'da ağ kısıtla (aşağıda) → yükle.
+
+**Beklenen**: Zaman aşımı yoksa tamamlanır, yoksa anlamlı hata + yeniden dene.
+
+**Kanıt**: Video + log.
+
+#### TS-19 – Sertifika PDF Üretimi
+**Amaç**: PDF oluşturuluyor ve indirilebiliyor mu?
+
+**Adımlar**: Admin panel → "Sertifika oluştur" → S3'e yükle.
+
+**Beklenen**: Kullanıcı "Bağışlarım > Sertifika"dan görüntüler/indirir.
+
+**Kanıt**: PDF açılmış ekran görüntüsü.
+
+#### TS-20 – QR Doğrulama
+**Amaç**: PDF üzerindeki QR ile doğrulama endpoint'i.
+
+**Adımlar**: QR'ı tara → `/certificate/verify?code=...`
+
+**Beklenen**: 200 + geçerli sertifika bilgisi.
+
+**Kanıt**: Tarayıcı ekranı.
+
+### 6) Performans, Ağ Koşulları, Hata Senaryoları
+
+#### TS-21 – Ağ Koşulları (Android)
+**Amaç**: Zayıf ağda yayın & izleme kararlılığı.
+
+**Adımlar**:
+- Emulator: Extended controls > Cellular → 2G/3G; Network → packet loss %5–10.
+
+**Beklenen**: Yayın düşse bile 5 sn içinde reconnect.
+
+**Kanıt**: Video + LiveKit reconnect log.
+
+#### TS-22 – Ağ Koşulları (iOS)
+**Adımlar**: macOS'ta Network Link Conditioner: 3G/Edge profilleri.
+
+**Beklenen**: Görüntü düşük kaliteye inse de kesintisiz veya kısa süreli (reovery).
+
+**Kanıt**: Video.
+
+#### TS-23 – 50 İzleyici İzleme (Staging)
+**Amaç**: İzleyici yük testi (HLS varsa daha verimli).
+
+**Adımlar**: 50 adet izleyici (emulator/gerçek) ya da script'li abone.
+
+**Beklenen**: Yayın gecikmesi makul, CPU yükselmez, panel akıcı.
+
+**Kanıt**: LiveKit/egress metrikleri + kısa video.
+
+#### TS-24 – Token Süresi & Saat Hatası
+**Amaç**: JWT exp ve cihaz saati sapmasında davranış.
+
+**Adımlar**: Cihaz saatini 10 dk geri/ileri al (test amaçlı).
+
+**Beklenen**: Token exp ise tekrar login yönlendirmesi + net mesaj.
+
+**Kanıt**: Ekran + log.
+
+#### TS-25 – Storage/MIME Güvenliği
+**Amaç**: Yanlış tip dosya red.
+
+**Adımlar**: .exe veya yanlış MIME ile yükleme dene.
+
+**Beklenen**: 400/415; dosya kabul edilmesin.
+
+**Kanıt**: Hata mesajı + S3'te obje yok.
+
+#### TS-26 – Bildirim/SMS Rate Limit
+**Amaç**: Kısa sürede çoklu istek limiti.
+
+**Adımlar**: 5 sn'de 10 bildirim/SMS gönder.
+
+**Beklenen**: Backend 429 veya queue; sistem çökmesin.
+
+**Kanıt**: Log + yanıtlar.
+
+#### TS-27 – Ödeme Aykırı Durumlar
+**Amaç**: Timeout/3D-cancel/refund testleri.
+
+**Adımlar**: PSP sandbox senaryolarını çalıştır.
+
+**Beklenen**: Doğru state transition, kullanıcıya net uyarı.
+
+**Kanıt**: PSP paneli + DB durumları.
+
+### 7) UAT (Gerçek Kullanıcı Senaryoları)
+
+#### TS-28 – Tam Bağış & Yayın Deneyimi
+**Akış**: Kayıt → OTP login → bağış sepeti → ödeme → yayın duyurusu → canlı izleme → tamamlanınca medya & sertifika.
+
+**Beklenen**: Baştan sona sorunsuz.
+
+#### TS-29 – Admin Operasyon Akışı
+**Akış**: Panelden yayın oluştur → admin app'te başlat/bitir → panelden izleme → medya yükleme → sertifika üret.
+
+**Beklenen**: Tüm adımlar 1 panel + 1 telefonla tamamlanır.
+
+#### TS-30 – Hesap & Profil
+Şifre/telefon değişimi, bildirim izinleri, dil seçimi (TR/AR/EN varsa).
+
+#### TS-31 – Çoklu Cihaz
+Aynı kullanıcının iki cihazdan aynı anda izleme/push davranışı.
+
+#### TS-32 – Hata Mesajlarının Anlaşılabilirliği
+İnternet yok, sunucu kapalı, 401/403/500 mesajları net ve Türkçe.
+
+### 8) Kanıt Toplama & Raporlama
+
+Her test için Screen/Video + backend log + tarih/saat kaydet.
+
+**Hata şablonu**:
+- **Başlık**
+- **Ortam** (staging/prod), App versiyon, Cihaz/OS
+- **Adımlar** (1..n)
+- **Beklenen / Gerçek sonuç**
+- **Ekran görüntüsü / Loglar**
+- **Öncelik** (P0 kritik – P3 düşük)
+
+### 9) Go / No-Go Checklist (Yayın Öncesi)
+
+- [ ] TS-01..TS-32 PASS
+- [ ] Sentry error rate < %0.5 (staging)
+- [ ] Ödeme sandbox'ta success/fail senaryoları PASS
+- [ ] Push & SMS teslim oranı > %90
+- [ ] LiveKit publish/watch kararlı (reconnect testi PASS)
+- [ ] Sertifika PDF + QR doğrulama PASS
+- [ ] Store metadata, izin açıklamaları, gizlilik metinleri hazır
+- [ ] EAS production build'leri imzalı ve test edildi
+
+### 10) Faydalı Komutlar (Hızlı)
+
+```bash
+# Android logcat
+adb logcat | find "API_BASE"
+adb logcat | find "axios"
+
+# Cihaz listesi
+adb devices
+
+# iOS sim ağ kısıt
+# Network Link Conditioner
+
+# Backend run
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Health
+curl -i https://api-stg.../api/v1/healthz
+
+# EAS build (staging)
+eas build -p android --profile staging
+eas build -p ios --profile staging
+
+# EAS Update (OTA küçük fix)
+eas update --channel staging
+```
+
+---
+
 ## Son söz
 
 Bu planı aynı sırayla uygula; araya yeni teknoloji/deneme katma.
+
+**Test Senaryoları**: TS-01'den TS-32'ye kadar tüm senaryoları birebir uygula ve her birine PASS/FAIL ver. Fail olanların hata raporlarını aç; kritikler (P0/P1) çözülmeden prod'a geçme.

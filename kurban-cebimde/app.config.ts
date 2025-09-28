@@ -28,6 +28,7 @@ export default {
     name: 'Kurban Cebimde',
     slug: 'kurban-cebimde',
     version: '1.0.0',
+    runtimeVersion: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -39,6 +40,9 @@ export default {
     assetBundlePatterns: [
       '**/*'
     ],
+    updates: {
+      url: 'https://u.expo.dev/c0b4098a-5731-4190-805e-cb035c4bf4c9'
+    },
     ios: {
       bundleIdentifier: 'com.kurbancebimde.app',
       supportsTablet: true,

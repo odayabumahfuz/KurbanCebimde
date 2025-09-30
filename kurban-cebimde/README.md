@@ -928,3 +928,18 @@ Bu proje [Lisans türü] altında lisanslanmıştır. Detaylar için [LICENSE](L
 **Proje**: ODAY ABUMAHFUZ tarafından geliştirilmiştir.
 
 **İletişim**: [İletişim bilgileri]
+
+---
+
+## 🎯 Proje Durumu
+
+<div align="center">
+
+# KurbanCebimde - Modern kurban organizasyonu platformu 🐑✨
+
+[![GitHub Stars](https://img.shields.io/github/stars/odayabumahfuz/KurbanCebimde?style=social)](https://github.com/odayabumahfuz/KurbanCebimde)
+[![Issues](https://img.shields.io/github/issues/odayabumahfuz/KurbanCebimde)](https://github.com/odayabumahfuz/KurbanCebimde/issues)
+
+**Made with ❤️ by ODAY ABUMAHFUZ**
+
+</div>

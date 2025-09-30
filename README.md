@@ -286,7 +286,7 @@ Bu proje MIT lisansı altında lisanslanmıştır.
 [![GitHub stars](https://img.shields.io/github/stars/your-org/kurban-cebimde?style=social)](https://github.com/your-org/kurban-cebimde/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/your-org/kurban-cebimde)](https://github.com/your-org/kurban-cebimde/issues)
 
-Made with ❤️ by the KurbanCebimde Team
+Made by ODAY ABUMAHFUZ
 
 </div>
 

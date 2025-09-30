@@ -247,6 +247,8 @@ docker-compose -f docker-compose.prod.yml up -d
 - [ ] Social media sharing
 - [ ] Offline sync özelliği
 
+### planlanan teslim tarihi 9/10/2025
+
 ## 🐛 Bilinen Sorunlar
 
 ### Build Issues (Çözüldü ✅)

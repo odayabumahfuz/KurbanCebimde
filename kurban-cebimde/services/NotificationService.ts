@@ -10,6 +10,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -153,7 +155,7 @@ export class NotificationService {
    * Gelen bildirimi işle
    */
   private handleNotificationReceived(notification: Notifications.Notification) {
-    const data = notification.request.content.data as PushNotificationData;
+    const data = notification.request.content.data as unknown as PushNotificationData;
     
     switch (data.type) {
       case 'kurban':
@@ -175,7 +177,7 @@ export class NotificationService {
    * Bildirime tıklanınca işle
    */
   private handleNotificationResponse(response: Notifications.NotificationResponse) {
-    const data = response.notification.request.content.data as PushNotificationData;
+    const data = response.notification.request.content.data as unknown as PushNotificationData;
     
     // Bildirim tipine göre yönlendirme yap
     switch (data.type) {

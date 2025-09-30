@@ -27,7 +27,7 @@ export default function LiveStreamScreen() {
         description: 'Türkiye bölgesinde büyükbaş kurban kesimi canlı yayını',
         tags: ['Büyükbaş', 'Türkiye', 'Canlı'],
         quality: '1080p',
-        thumbnail: require('../../assets/cattle.png')
+        thumbnail: require('../../assets/büyükbaş.png')
       },
       {
         id: 2,
@@ -43,7 +43,7 @@ export default function LiveStreamScreen() {
         description: 'Afrika bölgesinde koyun kurban kesimi planlanan yayını',
         tags: ['Koyun', 'Afrika', 'Planlandı'],
         quality: '720p',
-        thumbnail: require('../../assets/sheep.png')
+        thumbnail: require('../../assets/koyun.png')
       },
       {
         id: 3,
@@ -59,7 +59,7 @@ export default function LiveStreamScreen() {
         description: 'Türkiye\'de koç kurban kesimi tamamlanan yayını',
         tags: ['Koç', 'Türkiye', 'Tamamlandı'],
         quality: '1080p',
-        thumbnail: require('../../assets/ram.png')
+        thumbnail: require('../../assets/koç.png')
       }
     ];
     

@@ -3,10 +3,10 @@
 const ENV_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || undefined;
 const ADMIN_API_PREFIX = '/admin/v1';
 
-// ENV yoksa veya hatalıysa, mevcut origin üzerinden /api/admin/v1 kullan
+// ENV yoksa veya hatalıysa, backend'e doğrudan bağlan
 const API_BASE_URL = ENV_API_BASE && /^https?:\/\//.test(ENV_API_BASE)
   ? ENV_API_BASE
-  : `${window.location.origin}/api${ADMIN_API_PREFIX}`;
+  : `http://185.149.103.247:8000/api${ADMIN_API_PREFIX}`;
 
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
 console.log('🔧 VITE_PROXY:', import.meta.env.VITE_PROXY);

@@ -18,6 +18,7 @@ export default function HomeScreen() {
   const { t, getCurrentLanguage } = useLanguage();
   const [modal, setModal] = useState({ open: false, category: '', product: '' });
   const [activeRegion, setActiveRegion] = useState(regions[0].key);
+  const [hasActiveStream, setHasActiveStream] = useState(false); // Kullanıcının aktif yayını var mı?
   const current = useMemo(() => regions.find(r => r.key === activeRegion), [activeRegion]);
   const currentLang = getCurrentLanguage();
 
@@ -34,6 +35,15 @@ export default function HomeScreen() {
   }
 
   function handleJoinStream() {
+    if (!hasActiveStream) {
+      Alert.alert(
+        'Aktif Yayın Yok',
+        'Şu anda aktif yayınınız bulunmamaktadır.',
+        [{ text: 'Tamam', style: 'default' }]
+      );
+      return;
+    }
+    
     // Yayına katılma işlemi
     Alert.alert(
       t('home.liveStream.joinButton'),
@@ -77,34 +87,51 @@ export default function HomeScreen() {
       </View>
 
       {/* Canlı Yayın Kartı */}
-      <TouchableOpacity style={styles.liveStreamCard} onPress={() => handleJoinStream()}>
-        <View style={styles.liveIndicator}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>CANLI</Text>
-        </View>
-        <Text style={styles.liveTitle}>{t('home.liveStream.title')}</Text>
-        <Text style={styles.liveSubtitle}>{t('home.liveStream.subtitle')}</Text>
-        <View style={styles.liveStats}>
-          <View style={styles.liveStat}>
-            <Ionicons name="time" size={16} color="#6b7280" />
-            <Text style={styles.liveStatText}>{t('home.liveStream.timeLeft')}</Text>
-          </View>
-          <View style={styles.liveStat}>
-            <Ionicons name="calendar" size={16} color="#6b7280" />
-            <Text style={styles.liveStatText}>{t('home.liveStream.today')}</Text>
-          </View>
-        </View>
-        <View style={styles.joinButton}>
-          <Ionicons name="play-circle" size={20} color="#ef4444" />
-          <Text style={styles.joinButtonText}>{t('home.liveStream.joinButton')}</Text>
-        </View>
+      <TouchableOpacity style={[styles.liveStreamCard, !hasActiveStream && styles.inactiveStreamCard]} onPress={() => handleJoinStream()}>
+        {hasActiveStream ? (
+          <>
+            <View style={styles.liveIndicator}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>CANLI</Text>
+            </View>
+            <Text style={styles.liveTitle}>{t('home.liveStream.title')}</Text>
+            <Text style={styles.liveSubtitle}>{t('home.liveStream.subtitle')}</Text>
+            <View style={styles.liveStats}>
+              <View style={styles.liveStat}>
+                <Ionicons name="time" size={16} color="#6b7280" />
+                <Text style={styles.liveStatText}>{t('home.liveStream.timeLeft')}</Text>
+              </View>
+              <View style={styles.liveStat}>
+                <Ionicons name="calendar" size={16} color="#6b7280" />
+                <Text style={styles.liveStatText}>{t('home.liveStream.today')}</Text>
+              </View>
+            </View>
+            <View style={styles.joinButton}>
+              <Ionicons name="play-circle" size={20} color="#ef4444" />
+              <Text style={styles.joinButtonText}>{t('home.liveStream.joinButton')}</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.inactiveIndicator}>
+              <Ionicons name="videocam-off" size={24} color="#9ca3af" />
+              <Text style={styles.inactiveText}>YAYIN YOK</Text>
+            </View>
+            <Text style={styles.inactiveTitle}>Aktif Yayınınız Bulunmamaktadır</Text>
+            <Text style={styles.inactiveSubtitle}>Kurban kesimi yayını başlatıldığında burada görünecektir</Text>
+            <View style={styles.inactiveButton}>
+              <Ionicons name="information-circle" size={20} color="#6b7280" />
+              <Text style={styles.inactiveButtonText}>Bilgi</Text>
+            </View>
+          </>
+        )}
       </TouchableOpacity>
 
       {/* Kurban Kampanyaları */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.banners}>
-        <CampaignCard title={t('home.campaigns.kurban2025')} image={require('../../assets/ram.png')} onDonate={() => openKurban('Türkiye - koç', 'Koç Bağışı')} />
-        <CampaignCard title={t('home.campaigns.largeAnimal')} image={require('../../assets/cattle.png')} onDonate={() => openKurban('Türkiye - büyükbaş', 'Büyükbaş Bağışı')} />
-        <CampaignCard title={t('home.campaigns.sheep')} image={require('../../assets/sheep.png')} onDonate={() => openKurban('Filistin - koyun', 'Koyun Bağışı')} />
+        <CampaignCard title={t('home.campaigns.kurban2025')} image={require('../../assets/koç.png')} onDonate={() => openKurban('Türkiye - koç', 'Koç Bağışı')} />
+        <CampaignCard title={t('home.campaigns.largeAnimal')} image={require('../../assets/büyükbaş.png')} onDonate={() => openKurban('Türkiye - büyükbaş', 'Büyükbaş Bağışı')} />
+        <CampaignCard title={t('home.campaigns.sheep')} image={require('../../assets/koyun.png')} onDonate={() => openKurban('Filistin - koyun', 'Koyun Bağışı')} />
       </ScrollView>
 
       {/* Öne Çıkan Bağışlar (sade) */}
@@ -242,6 +269,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 6
   },
+  inactiveStreamCard: { backgroundColor: '#f9fafb', borderColor: '#e5e7eb', borderWidth: 1 },
+  inactiveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  inactiveText: { color: '#9ca3af', fontWeight: '700', fontSize: 12, letterSpacing: 0.5 },
+  inactiveTitle: { fontSize: 16, fontWeight: '700', color: '#6b7280', marginBottom: 4 },
+  inactiveSubtitle: { fontSize: 14, color: '#9ca3af', marginBottom: 12, lineHeight: 20 },
+  inactiveButton: { backgroundColor: '#f3f4f6', borderColor: '#d1d5db', borderWidth: 1, borderRadius: tokens.radii.md, padding: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 },
+  inactiveButtonText: { color: '#6b7280', fontWeight: '600', fontSize: 14 },
   banners: { 
     gap: 16, 
     paddingVertical: 16,

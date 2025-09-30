@@ -10,7 +10,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-audio';
 import Constants from 'expo-constants';
 import { LIVEKIT_CONFIG } from '../../lib/livekitConfig';
 import { livekitAPI } from '../../lib/api';

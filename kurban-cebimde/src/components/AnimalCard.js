@@ -15,7 +15,7 @@ export default function AnimalCard({ name, color = '#F1F5F9', onPress, image }) 
   return (
     <Animated.View style={[styles.card, { transform: [{ scale }] }] }>
       <TouchableOpacity activeOpacity={0.9} onPressIn={handlePressIn} onPressOut={handlePressOut} style={{ flex: 1 }}>
-        <ImageBackground source={image} style={styles.bg} imageStyle={styles.bgImage}>
+        <ImageBackground source={image} style={styles.bg} imageStyle={styles.bgImage} resizeMode="cover">
           <View style={styles.overlay} />
           <Text style={styles.title}>{name[0].toUpperCase() + name.slice(1)}</Text>
           <View style={styles.selectBtn}><Text style={styles.selectText}>Seç</Text></View>
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     height: 160,
   },
   bg: { flex: 1, justifyContent: 'flex-end', padding: 12 },
-  bgImage: { resizeMode: 'cover' },
+  bgImage: { resizeMode: 'cover', width: '100%', height: '100%' },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)' },
   title: { fontWeight: '800', fontSize: 16, color: '#fff' },
   selectBtn: { backgroundColor: 'rgba(255,255,255,0.95)', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, marginTop: 8 },

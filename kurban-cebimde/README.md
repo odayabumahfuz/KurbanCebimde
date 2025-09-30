@@ -1,5 +1,92 @@
 # Kurban Cebimde - Canlı Yayın ve Bağış Platformu
 
+## 📱 Basit Açıklama (Teknik Olmayanlar İçin)
+
+**Kurban Cebimde** nedir?
+- Kurban bağışı yapabileceğiniz ve canlı yayın izleyebileceğiniz bir mobil uygulama
+- Bağış yaptığınız kurbanın kesimini canlı olarak izleyebilirsiniz
+- Kesim sonrası sertifika ve video alabilirsiniz
+
+**Nasıl Çalışır?**
+1. **Kullanıcı**: Uygulamayı indirir, bağış yapar, yayını izler
+2. **Admin**: Yayını başlatır, kamerayı açar, kesimi yapar
+3. **Sistem**: Bağışları kaydeder, ödemeleri işler, sertifika üretir
+
+**Teknik Bileşenler:**
+- **Mobil Uygulama**: iOS ve Android (React Native)
+- **Web Paneli**: Yönetim için (React)
+- **Sunucu**: Veritabanı ve API (Python FastAPI)
+- **Canlı Yayın**: WebRTC teknolojisi (LiveKit)
+- **Ödeme**: Güvenli ödeme sistemi
+- **Bildirim**: SMS ve push bildirimleri
+
+**Yayın Tarihi**: En geç 9 Ekim 2024
+
+---
+
+## ⚠️ Mevcut Durum ve Kalan İşler
+
+### ✅ Tamamlananlar
+- [x] Proje yapısı ve konfigürasyon
+- [x] Backend API geliştirme
+- [x] Mobil uygulama temel yapısı
+- [x] Canlı yayın sistemi (LiveKit)
+- [x] Ödeme entegrasyonu
+- [x] Bildirim sistemi
+- [x] Admin paneli
+- [x] Test senaryoları
+
+### 🔧 WebRTC'den Kaynaklanan Hatalar
+- **iOS Simulator**: WebRTC tam desteklenmiyor (gerçek cihaz gerekli)
+- **Android Emulator**: Bazı cihazlarda kamera/mikrofon sorunları
+- **Ağ Bağlantısı**: Zayıf internet bağlantısında yayın kesintileri
+- **Cihaz Uyumluluğu**: Eski Android cihazlarda (API 24 altı) sorunlar
+
+### 📋 Kalan İşler (9 Ekim'e Kadar)
+
+#### Yüksek Öncelik
+- [ ] **WebRTC hatalarının düzeltilmesi**
+  - iOS gerçek cihaz testleri
+  - Android cihaz uyumluluk testleri
+  - Ağ kesintilerinde otomatik yeniden bağlanma
+- [ ] **Son testler ve hata düzeltmeleri**
+  - Canlı yayın stabilite testleri
+  - Ödeme akışı testleri
+  - Bildirim sistemi testleri
+- [ ] **Mağaza yayın hazırlığı**
+  - App Store ve Google Play Store metadata
+  - Gizlilik politikası ve kullanım şartları
+  - Uygulama açıklamaları ve ekran görüntüleri
+
+#### Orta Öncelik
+- [ ] **Performans optimizasyonu**
+  - Yayın kalitesi ayarları
+  - Bellek kullanımı optimizasyonu
+  - Batarya tüketimi iyileştirmeleri
+- [ ] **Kullanıcı deneyimi iyileştirmeleri**
+  - Hata mesajlarının Türkçeleştirilmesi
+  - Yükleme ekranları ve animasyonlar
+  - Offline mod desteği
+
+#### Düşük Öncelik
+- [ ] **Ek özellikler**
+  - Çoklu dil desteği (Arapça, İngilizce)
+  - Gelişmiş raporlama
+  - Sosyal medya paylaşımı
+
+### 🚨 Kritik Sorunlar
+1. **WebRTC Stabilite**: Canlı yayında kesintiler
+2. **Cihaz Uyumluluğu**: Bazı Android cihazlarda çalışmama
+3. **Ağ Optimizasyonu**: Yavaş internet bağlantısında sorunlar
+
+### 📅 Zaman Çizelgesi
+- **2-3 Ekim**: WebRTC hatalarının düzeltilmesi
+- **4-5 Ekim**: Son testler ve hata düzeltmeleri
+- **6-7 Ekim**: Mağaza yayın hazırlığı
+- **8-9 Ekim**: Final testler ve yayın
+
+---
+
 ## Genel Mimari ve Roller
 
 ### Uygulamalar
@@ -806,3 +893,30 @@ eas update --channel staging
 Bu planı aynı sırayla uygula; araya yeni teknoloji/deneme katma.
 
 **Test Senaryoları**: TS-01'den TS-32'ye kadar tüm senaryoları birebir uygula ve her birine PASS/FAIL ver. Fail olanların hata raporlarını aç; kritikler (P0/P1) çözülmeden prod'a geçme.
+
+---
+
+## 📞 İletişim ve Destek
+
+**Proje Sahibi**: [İletişim bilgileri]
+**Geliştirici**: [İletişim bilgileri]
+**Teknik Destek**: [İletişim bilgileri]
+
+**GitHub Repository**: [Repository URL]
+**Canlı Demo**: [Demo URL]
+**Test Ortamı**: [Staging URL]
+
+---
+
+## 📄 Lisans
+
+Bu proje [Lisans türü] altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+
+---
+
+## 🙏 Teşekkürler
+
+- LiveKit ekibine WebRTC altyapısı için
+- Expo ekibine React Native geliştirme ortamı için
+- FastAPI ekibine backend framework için
+- Tüm açık kaynak katkıda bulunanlara

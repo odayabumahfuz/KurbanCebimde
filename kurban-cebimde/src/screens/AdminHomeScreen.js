@@ -139,7 +139,7 @@ export default function AdminHomeScreen({ navigation }) {
         <View style={styles.headerLeft}>
           <View style={styles.logoContainer}>
             <Image 
-              source={require('../../assets/images/kurbancebimdeYlogo.png')} 
+              source={require('../../assets/kurbancebimdeYlogo.png')} 
               style={styles.logoImage}
               resizeMode="contain"
             />

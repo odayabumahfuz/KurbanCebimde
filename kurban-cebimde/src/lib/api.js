@@ -29,13 +29,13 @@ console.log('🔍 Constants.expoConfig?.extra:', Constants.expoConfig?.extra);
 
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 60000 // 60 saniye timeout
+  timeout: 10000 // 10 saniye timeout
 });
 
 // Admin API için ayrı instance
 export const adminApi = axios.create({
   baseURL: API_BASE.replace('/api/v1', '/api/admin/v1'),
-  timeout: 60000
+  timeout: 10000
 });
 
 // Admin API metodları

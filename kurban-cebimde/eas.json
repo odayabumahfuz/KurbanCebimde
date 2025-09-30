@@ -1,6 +1,6 @@
 {
-  "cli": {
-    "version": ">= 5.9.0",
+  "cli": { 
+    "version": ">= 3.18.0",
     "appVersionSource": "remote"
   },
   "build": {
@@ -10,14 +10,11 @@
       "env": { "APP_ENV": "development" },
       "android": {
         "gradleCommand": ":app:assembleDebug",
-        "buildType": "apk",
-        "credentialsSource": "remote"
+        "buildType": "apk"
       },
       "ios": {
         "buildConfiguration": "Debug",
-        "simulator": true,
-        "credentialsSource": "remote",
-        "image": "macos-sequoia-15.0-xcode-16.0"
+        "simulator": true
       }
     },
     "preview": {
@@ -25,13 +22,10 @@
       "env": { "APP_ENV": "preview" },
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease",
-        "credentialsSource": "remote"
+        "gradleCommand": ":app:assembleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release",
-        "credentialsSource": "remote",
-        "image": "macos-sequoia-15.0-xcode-16.0"
+        "buildConfiguration": "Release"
       }
     },
     "staging": {
@@ -39,26 +33,21 @@
       "env": { "APP_ENV": "staging" },
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease",
-        "credentialsSource": "remote"
+        "gradleCommand": ":app:assembleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release",
-        "credentialsSource": "remote",
-        "image": "macos-sequoia-15.0-xcode-16.0"
+        "buildConfiguration": "Release"
       }
     },
     "production": {
       "env": { "APP_ENV": "production" },
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease",
-        "credentialsSource": "remote"
+        "gradleCommand": ":app:bundleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release",
-        "credentialsSource": "remote",
-        "image": "macos-sequoia-15.0-xcode-16.0"
+        "buildConfiguration": "Release"
       }
     }
   },

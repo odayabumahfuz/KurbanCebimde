@@ -898,11 +898,11 @@ Bu planı aynı sırayla uygula; araya yeni teknoloji/deneme katma.
 
 ## 📞 İletişim ve Destek
 
-**Proje Sahibi**: [İletişim bilgileri]
-**Geliştirici**: [İletişim bilgileri]
-**Teknik Destek**: [İletişim bilgileri]
+**Proje Sahibi**: ODAY ABUMAHFUZ
+**Geliştirici**: ODAY ABUMAHFUZ
+**Teknik Destek**: ODAY ABUMAHFUZ
 
-**GitHub Repository**: [Repository URL]
+**GitHub Repository**: https://github.com/odayabumahfuz/KurbanCebimde
 **Canlı Demo**: [Demo URL]
 **Test Ortamı**: [Staging URL]
 
@@ -920,3 +920,11 @@ Bu proje [Lisans türü] altında lisanslanmıştır. Detaylar için [LICENSE](L
 - Expo ekibine React Native geliştirme ortamı için
 - FastAPI ekibine backend framework için
 - Tüm açık kaynak katkıda bulunanlara
+
+---
+
+## 👨‍💻 Geliştirici
+
+**Proje**: ODAY ABUMAHFUZ tarafından geliştirilmiştir.
+
+**İletişim**: [İletişim bilgileri]

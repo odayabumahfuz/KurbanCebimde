@@ -40,8 +40,16 @@ services:
       - SMTP_PASSWORD=your_app_password
       
       # Security
-      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:8081
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081,http://admin.kurbancebimde.com
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8081,http://admin.kurbancebimde.com
+      
+      # Sentry
+      - SENTRY_DSN=
+      
+      # NetGSM
+      - NETGSM_USER=8503033128
+      - NETGSM_PASS=56AF_DE
+      - NETGSM_HEADER=8503033128
       
       # Monitoring
       - DEBUG=true

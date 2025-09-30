@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 import uuid
 import logging
 import traceback
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from .middleware.error_handler import (
     global_exception_handler,
@@ -29,6 +32,7 @@ from .routers.notifications import router as notifications_router
 from .routers.certificates import router as certificates_router
 from .routers.test import router as test_router
 from .routers.error_test import router as error_test_router
+from .routers.sms import router as sms_router
 
 load_dotenv()
 
@@ -167,6 +171,19 @@ def create_tables():
 
 
 def create_app() -> FastAPI:
+    # Sentry initialization
+    sentry_dsn = os.getenv("SENTRY_DSN")
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[
+                FastApiIntegration(auto_enabling_instrumentations=True),
+                SqlalchemyIntegration(),
+            ],
+            traces_sample_rate=0.1,
+            environment=os.getenv("ENV", "development"),
+        )
+    
     # Migration'ı çalıştır
     create_tables()
     
@@ -228,10 +245,38 @@ def create_app() -> FastAPI:
     app.include_router(certificates_router, prefix="/api/certificates/v1")
     app.include_router(test_router, prefix="/api/test/v1")
     app.include_router(error_test_router, prefix="/api/error-test/v1")
+    app.include_router(sms_router, prefix="/api/sms/v1")
 
     @app.get("/health")
     async def health():
         return {"status": "ok"}
+    
+    @app.get("/healthz")
+    async def healthz():
+        """Kubernetes/Docker health check endpoint"""
+        return {"status": "ok", "timestamp": int(time.time())}
+    
+    @app.get("/version")
+    async def version():
+        """Version and build info endpoint"""
+        import subprocess
+        import os
+        
+        try:
+            # Git commit hash
+            git_hash = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], 
+                cwd=os.path.dirname(os.path.abspath(__file__))
+            ).decode().strip()[:8]
+        except:
+            git_hash = "unknown"
+            
+        return {
+            "version": "1.0.0",
+            "git_hash": git_hash,
+            "environment": os.getenv("ENV", "development"),
+            "timestamp": int(time.time())
+        }
 
     # --- Monitor uçları (panel için basit health) ---
     @app.get("/api/monitor/status")

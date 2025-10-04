@@ -33,6 +33,7 @@ from .routers.certificates import router as certificates_router
 from .routers.test import router as test_router
 from .routers.error_test import router as error_test_router
 from .routers.sms import router as sms_router
+from .routers.health_db import router as health_router
 
 load_dotenv()
 
@@ -105,22 +106,25 @@ def create_tables():
             """))
             
             # Certificates tablosu (Sistem Mimarisi Uyumlu)
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS certificates (
-                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-                    donation_id UUID REFERENCES donations(id),
-                    stream_id UUID REFERENCES streams(id),
-                    certificate_type VARCHAR(50) NOT NULL,
-                    certificate_data JSONB,
-                    pdf_path VARCHAR(500),
-                    qr_code VARCHAR(500),
-                    verification_code VARCHAR(100) UNIQUE,
-                    is_verified BOOLEAN DEFAULT FALSE,
-                    verified_at TIMESTAMP,
-                    created_at TIMESTAMP DEFAULT NOW()
-                )
-            """))
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS certificates (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                        donation_id UUID REFERENCES donations(id),
+                        stream_id UUID REFERENCES streams(id),
+                        certificate_type VARCHAR(50) NOT NULL,
+                        certificate_data JSONB,
+                        pdf_path VARCHAR(500),
+                        qr_code VARCHAR(500),
+                        verification_code VARCHAR(100) UNIQUE,
+                        is_verified BOOLEAN DEFAULT FALSE,
+                        verified_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+            except Exception as e:
+                print(f"⚠️ Certificates tablo oluşturma atlandı: {e}")
             
             # Notifications tablosu (Sistem Mimarisi Uyumlu)
             conn.execute(text("""
@@ -159,10 +163,103 @@ def create_tables():
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_streams_user_id ON streams(user_id)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_streams_status ON streams(status)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_streams_scheduled_at ON streams(scheduled_at)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_certificates_user_id ON certificates(user_id)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_certificates_verification_code ON certificates(verification_code)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)"))
+
+            # --- NEW: Media & Broadcast History Schema ---
+            # donation_broadcast_participation
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS donation_broadcast_participation (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id UUID NOT NULL REFERENCES users(id),
+                    donation_id UUID NOT NULL REFERENCES donations(id),
+                    broadcast_id UUID NOT NULL REFERENCES streams(id),
+                    joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                    UNIQUE(user_id, donation_id, broadcast_id)
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_dbp_user_joined_at ON donation_broadcast_participation(user_id, joined_at DESC)"))
+
+            # media_assets
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS media_assets (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        owner_donation_id UUID REFERENCES donations(id),
+                        broadcast_id UUID REFERENCES streams(id),
+                        storage_key TEXT NOT NULL,
+                        mime_type TEXT NOT NULL,
+                        duration_seconds INTEGER,
+                        width INTEGER,
+                        height INTEGER,
+                        size_bytes BIGINT,
+                        status TEXT NOT NULL CHECK (status IN ('uploaded','review','approved','rejected')),
+                        created_by UUID REFERENCES users(id),
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        reviewed_by UUID REFERENCES users(id),
+                        reviewed_at TIMESTAMP WITH TIME ZONE
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_media_assets_owner_status_created ON media_assets(status, owner_donation_id, created_at DESC)"))
+            except Exception as e:
+                print(f"⚠️ media_assets tablo/index oluşturma atlandı: {e}")
+
+            # media_delivery
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS media_delivery (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        donation_id UUID NOT NULL REFERENCES donations(id),
+                        media_asset_id UUID NOT NULL REFERENCES media_assets(id),
+                        delivered_by UUID REFERENCES users(id),
+                        delivered_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        UNIQUE (donation_id, media_asset_id)
+                    )
+                """))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_media_delivery_donation_delivered ON media_delivery(donation_id, delivered_at DESC)"))
+            except Exception as e:
+                print(f"⚠️ media_delivery tablo/index oluşturma atlandı: {e}")
+
+            # media_packages
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS media_packages (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        donation_id UUID NOT NULL REFERENCES donations(id),
+                        title TEXT NOT NULL,
+                        note TEXT,
+                        status TEXT NOT NULL CHECK (status IN ('draft','published')),
+                        created_by UUID REFERENCES users(id),
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        published_at TIMESTAMP WITH TIME ZONE
+                    )
+                """))
+            except Exception as e:
+                print(f"⚠️ media_packages tablo oluşturma atlandı: {e}")
+
+            # media_package_items
+            try:
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS media_package_items (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        package_id UUID NOT NULL REFERENCES media_packages(id) ON DELETE CASCADE,
+                        media_asset_id UUID NOT NULL REFERENCES media_assets(id),
+                        position INTEGER NOT NULL DEFAULT 0,
+                        UNIQUE (package_id, media_asset_id)
+                    )
+                """))
+            except Exception as e:
+                print(f"⚠️ media_package_items tablo oluşturma atlandı: {e}")
+
+            # Indexler - tablo yoksa hata vermesin
+            for stmt, label in [
+                ("CREATE INDEX IF NOT EXISTS idx_certificates_user_id ON certificates(user_id)", "idx_certificates_user_id"),
+                ("CREATE INDEX IF NOT EXISTS idx_certificates_verification_code ON certificates(verification_code)", "idx_certificates_verification_code"),
+                ("CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)", "idx_notifications_user_id"),
+                ("CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)", "idx_notifications_status"),
+            ]:
+                try:
+                    conn.execute(text(stmt))
+                except Exception as e:
+                    print(f"⚠️ Index {label} atlandı: {e}")
             
             conn.commit()
             print("✅ Sistem Mimarisi Uyumlu Tüm Tablolar Oluşturuldu!")
@@ -243,9 +340,10 @@ def create_app() -> FastAPI:
     app.include_router(livekit_router, prefix="/api/livekit/v1")
     app.include_router(notifications_router, prefix="/api/notifications/v1")
     app.include_router(certificates_router, prefix="/api/certificates/v1")
-    app.include_router(test_router, prefix="/api/test/v1")
+    app.include_router(test_router, prefix="/api/v1/test")
     app.include_router(error_test_router, prefix="/api/error-test/v1")
     app.include_router(sms_router, prefix="/api/sms/v1")
+    app.include_router(health_router)
 
     @app.get("/health")
     async def health():

@@ -19,6 +19,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
+import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
 
@@ -45,6 +47,42 @@ export default function LoginScreen({ navigation }) {
       }),
     ]).start();
   }, []);
+
+  const handleDiagnose = async () => {
+    try {
+      const API_BASE = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiBase || 'http://10.0.2.2:8000/api/v1';
+      const ENV = Constants.expoConfig?.extra?.env || 'development';
+      
+      let diagnoseInfo = `🔍 DIAGNOSE INFO:\n`;
+      diagnoseInfo += `ENV: ${ENV}\n`;
+      diagnoseInfo += `API_BASE: ${API_BASE}\n`;
+      diagnoseInfo += `EXPO_PUBLIC_API_URL: ${process.env.EXPO_PUBLIC_API_URL || 'undefined'}\n`;
+      
+      // Test health endpoint
+      try {
+        const healthResponse = await api.get('/auth/health');
+        diagnoseInfo += `Health Status: ✅ ${healthResponse.status}\n`;
+      } catch (healthError) {
+        diagnoseInfo += `Health Status: ❌ ${healthError.message}\n`;
+      }
+      
+      // Test login endpoint
+      try {
+        const loginResponse = await api.post('/auth/login', {
+          phoneOrEmail: '5551234567',
+          password: '123456'
+        });
+        diagnoseInfo += `Login Test: ✅ ${loginResponse.status}\n`;
+      } catch (loginError) {
+        diagnoseInfo += `Login Test: ❌ ${loginError.response?.status || 'Network Error'}\n`;
+        diagnoseInfo += `Login Error: ${loginError.message}\n`;
+      }
+      
+      Alert.alert('Diagnose', diagnoseInfo);
+    } catch (error) {
+      Alert.alert('Diagnose Error', error.message);
+    }
+  };
 
   const handleLogin = async () => {
     if (!phoneNumber || !password) {
@@ -151,6 +189,14 @@ export default function LoginScreen({ navigation }) {
                 <Text style={styles.buttonText}>Giriş Yap</Text>
               </>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.secondaryButton, { marginTop: 10 }]}
+            onPress={handleDiagnose}
+          >
+            <Ionicons name="bug" size={20} color={colors.primary} />
+            <Text style={[styles.buttonText, { color: colors.primary }]}>Diagnose</Text>
           </TouchableOpacity>
         </View>
 

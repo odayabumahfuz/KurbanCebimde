@@ -27,7 +27,7 @@ export default function LiveStreamScreen() {
         description: 'Türkiye bölgesinde büyükbaş kurban kesimi canlı yayını',
         tags: ['Büyükbaş', 'Türkiye', 'Canlı'],
         quality: '1080p',
-        thumbnail: require('../../assets/büyükbaş.png')
+        thumbnail: require('../../assets/buyukbas.png')
       },
       {
         id: 2,
@@ -59,7 +59,7 @@ export default function LiveStreamScreen() {
         description: 'Türkiye\'de koç kurban kesimi tamamlanan yayını',
         tags: ['Koç', 'Türkiye', 'Tamamlandı'],
         quality: '1080p',
-        thumbnail: require('../../assets/koç.png')
+        thumbnail: require('../../assets/koc.png')
       }
     ];
     

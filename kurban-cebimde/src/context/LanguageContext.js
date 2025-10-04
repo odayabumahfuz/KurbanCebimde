@@ -32,7 +32,7 @@ export const LanguageProvider = ({ children }) => {
         setLanguage(savedLanguage);
       } else {
         // Cihazın dilini algıla
-        const deviceLanguage = Localization.locale.split('-')[0];
+        const deviceLanguage = Localization.locale?.split('-')[0] || 'tr';
         if (translations[deviceLanguage]) {
           setLanguage(deviceLanguage);
         } else {
@@ -59,6 +59,7 @@ export const LanguageProvider = ({ children }) => {
   };
 
   const t = (key, params = {}) => {
+    if (!key) return '';
     const keys = key.split('.');
     let translation = translations[language];
     

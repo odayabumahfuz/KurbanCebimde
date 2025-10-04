@@ -110,17 +110,28 @@ const StreamViewer: React.FC<StreamViewerProps> = ({ streamId, roomName, token }
         const attachExistingTracks = () => {
           if (!isMounted || !roomRef.current) return;
           console.log('🔍 Mevcut track\'ler kontrol ediliyor...');
-          
-          roomRef.current.remoteParticipants.forEach(participant => {
+
+          const participantsMap = roomRef.current.remoteParticipants;
+          if (!participantsMap || participantsMap.size === 0) return;
+
+          participantsMap.forEach((participant) => {
             console.log('👤 Katılımcı:', participant.identity);
-            participant.tracks.forEach(publication => {
-              console.log('📺 Track:', publication.kind, 'subscribed:', publication.isSubscribed, 'hasTrack:', !!publication.track);
-              
-              if (publication.isSubscribed && publication.track && publication.kind === Track.Kind.Video && videoRef.current) {
+            // RN/Web SDK versiyonlarına göre publications farklı map isimlerinde olabilir
+            const pubs = (participant as any)?.trackPublications && typeof (participant as any).trackPublications.values === 'function'
+              ? Array.from((participant as any).trackPublications.values())
+              : ((participant as any)?.tracks && typeof (participant as any).tracks.values === 'function'
+                  ? Array.from((participant as any).tracks.values())
+                  : []);
+
+            pubs.forEach((publication: any) => {
+              const hasTrack = !!publication?.track;
+              console.log('📺 Track:', publication?.kind, 'subscribed:', publication?.isSubscribed, 'hasTrack:', hasTrack);
+
+              if (publication?.isSubscribed && publication?.track && publication?.kind === Track.Kind.Video && videoRef.current) {
                 console.log('🎬 Mevcut video track attach ediliyor...');
                 publication.track.attach(videoRef.current);
                 console.log('✅ Mevcut video track bağlandı!');
-              } else if (!publication.isSubscribed) {
+              } else if (publication && publication.setSubscribed && !publication.isSubscribed) {
                 console.log('📡 Track abone olunuyor...');
                 publication.setSubscribed(true);
               }
@@ -250,17 +261,25 @@ const StreamViewer: React.FC<StreamViewerProps> = ({ streamId, roomName, token }
           const attachExistingTracks = () => {
             if (!roomRef.current) return;
             console.log('🔍 Mevcut track\'ler kontrol ediliyor...');
-            
-            roomRef.current.remoteParticipants.forEach(participant => {
+
+            const participantsMap = roomRef.current.remoteParticipants;
+            participantsMap?.forEach((participant) => {
               console.log('👤 Katılımcı:', participant.identity);
-              participant.tracks.forEach(publication => {
-                console.log('📺 Track:', publication.kind, 'subscribed:', publication.isSubscribed, 'hasTrack:', !!publication.track);
-                
-                if (publication.isSubscribed && publication.track && publication.kind === Track.Kind.Video && videoRef.current) {
+              const pubs = (participant as any)?.trackPublications && typeof (participant as any).trackPublications.values === 'function'
+                ? Array.from((participant as any).trackPublications.values())
+                : ((participant as any)?.tracks && typeof (participant as any).tracks.values === 'function'
+                    ? Array.from((participant as any).tracks.values())
+                    : []);
+
+              pubs.forEach((publication: any) => {
+                const hasTrack = !!publication?.track;
+                console.log('📺 Track:', publication?.kind, 'subscribed:', publication?.isSubscribed, 'hasTrack:', hasTrack);
+
+                if (publication?.isSubscribed && publication?.track && publication?.kind === Track.Kind.Video && videoRef.current) {
                   console.log('🎬 Mevcut video track attach ediliyor...');
                   publication.track.attach(videoRef.current);
                   console.log('✅ Mevcut video track bağlandı!');
-                } else if (!publication.isSubscribed) {
+                } else if (publication && publication.setSubscribed && !publication.isSubscribed) {
                   console.log('📡 Track abone olunuyor...');
                   publication.setSubscribed(true);
                 }

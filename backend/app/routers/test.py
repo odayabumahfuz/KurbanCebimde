@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import Dict, List
 import time
 import random
+import os
+from sqlalchemy import create_engine, text
 
 from ..services.notification_service import notification_service
 from ..services.certificate_service import certificate_service
@@ -17,6 +19,33 @@ class TestNotificationRequest(BaseModel):
 class TestCertificateRequest(BaseModel):
     user_id: str = "test_user_123"
     kurban_id: str = "test_kurban_456"
+
+@router.post("/login-as-admin")
+async def login_as_admin():
+    # Test amaçlı: üretimde kapatılmalı. ENV != test olsa da local geliştirme için token üret.
+    try:
+        # Basit: kullanıcı tablosundan admin var mı, yoksa oluştur ve token döndür
+        import jwt
+        from datetime import datetime, timedelta
+        SECRET_KEY = os.getenv("SECRET_KEY", "test_secret")
+        DATABASE_URL = os.getenv("DATABASE_URL")
+        if not DATABASE_URL:
+            return {"access_token": "test", "token_type": "bearer"}
+        engine = create_engine(DATABASE_URL)
+        with engine.connect() as conn:
+            row = conn.execute(text("SELECT id FROM users WHERE is_super_admin = TRUE LIMIT 1")).fetchone()
+            user_id = row.id if row else "00000000-0000-0000-0000-000000000000"
+        payload = {
+            "user_id": str(user_id),
+            "is_admin": True,
+            "is_super_admin": True,
+            "exp": datetime.utcnow() + timedelta(hours=1),
+            "iat": datetime.utcnow(),
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+        return {"access_token": token, "token_type": "bearer"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Test Endpoints
 @router.get("/")

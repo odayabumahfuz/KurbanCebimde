@@ -118,7 +118,8 @@ export default function AdminLiveScreen({ navigation }) {
               roomName,
               participantName,
               participantIdentity,
-              streamId
+              streamId,
+              mode: 'publisher'
             });
           }
         },

@@ -61,6 +61,88 @@ def get_current_user(
     
     return user
 
+@router.post("/otp/send", response_model=dict)
+async def send_otp(request: dict, db: Session = Depends(get_db)):
+    """Send OTP to phone number"""
+    # Get phone from request
+    phone = request.get("phone", "")
+    # Normalize phone
+    normalized_phone = normalize_phone(phone)
+    
+    if not normalized_phone or len(normalized_phone) != 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz telefon numarası"
+        )
+    
+    # Generate OTP (for testing, use 123456)
+    otp_code = "123456"
+    
+    # TODO: Implement SMS sending with NetGSM
+    # For now, just return success
+    
+    return {
+        "success": True,
+        "message": "OTP gönderildi",
+        "phone": normalized_phone,
+        "otp": otp_code  # Remove this in production
+    }
+
+@router.post("/otp/verify", response_model=dict)
+async def verify_otp(request: dict, db: Session = Depends(get_db)):
+    """Verify OTP and login/register user"""
+    # Get phone and otp from request
+    phone = request.get("phone", "")
+    otp = request.get("otp", "")
+    # Normalize phone
+    normalized_phone = normalize_phone(phone)
+    
+    if not normalized_phone or len(normalized_phone) != 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz telefon numarası"
+        )
+    
+    # For testing, accept any OTP
+    if otp != "123456":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz OTP kodu"
+        )
+    
+    # Check if user exists
+    user = db.query(User).filter(User.phone == normalized_phone).first()
+    
+    if not user:
+        # Create new user
+        user = User(
+            phone=normalized_phone,
+            name=f"User {normalized_phone}",
+            role="user"
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    # Create access token
+    access_token = create_access_token(
+        data={"sub": str(user.id), "phone": user.phone, "role": user.role},
+        expires_delta=timedelta(hours=24)
+    )
+    
+    return {
+        "success": True,
+        "message": "Giriş başarılı",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "phone": user.phone,
+            "name": user.name,
+            "role": user.role
+        }
+    }
+
 @router.post("/register", response_model=dict)
 async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """Register new user"""

@@ -186,13 +186,13 @@ export default function AccountScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={styles.rowBoxes}>
-            <TouchableOpacity style={styles.navBox} onPress={() => navigation.navigate('Sertifikalarım')}>
-              <Ionicons name="document-text-outline" size={18} color={colors.text} />
-              <Text style={styles.navText}>{t('home.navigation.certificates')}</Text>
+            <TouchableOpacity style={styles.navBox} onPress={() => navigation.navigate('Yayın Geçmişi')}>
+              <Ionicons name="time-outline" size={18} color={colors.text} />
+              <Text style={styles.navText}>Yayın Geçmişi</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.navBox} onPress={() => navigation.navigate('Raporlarım')}>
-              <Ionicons name="analytics-outline" size={18} color={colors.text} />
-              <Text style={styles.navText}>{t('home.navigation.reports')}</Text>
+            <TouchableOpacity style={styles.navBox} onPress={() => navigation.navigate('Kartlarım')}>
+              <Ionicons name="card-outline" size={18} color={colors.text} />
+              <Text style={styles.navText}>{t('home.navigation.myCards')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.rowBoxes}>

@@ -1,23 +1,27 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AdminLoginPage from './pages/AdminLoginPage';
+import ForbiddenPage from './pages/ForbiddenPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import StreamsPage from './pages/StreamsPage';
 import StreamDetailPage from './pages/StreamDetailPage';
 import StreamViewerPage from './pages/StreamViewerPage';
 import SettingsPage from './pages/SettingsPage';
-import ReportsPage from './pages/ReportsPage';
 import BackendStatusPage from './pages/BackendStatusPage';
 import AdminProfilePage from './pages/AdminProfilePage';
 import UsersPage from './pages/UsersPage';
 import NotificationsPage from './pages/NotificationsPage';
+import ReportsPage from './pages/ReportsPage';
+import RolesPage from './pages/RolesPage';
 import CertificatesPage from './pages/CertificatesPage';
 import CatalogPage from './pages/CatalogPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import OrdersPage from './pages/OrdersPage';
 import DonationsPage from './pages/DonationsPage';
+import MediaUploadPage from './pages/MediaUploadPage';
 
 import { adminApi } from './lib/adminApi';
+import { RequireRoles } from './components/RBAC';
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -43,7 +47,9 @@ function App() {
           path="/admin/dashboard" 
           element={
             <ProtectedRoute>
-              <AdminDashboardPage />
+              <RequireRoles roles={["admin","owner","super_admin"]}>
+                <AdminDashboardPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
@@ -83,7 +89,9 @@ function App() {
           path="/admin/users" 
           element={
             <ProtectedRoute>
-              <UsersPage />
+              <RequireRoles roles={["admin","owner","super_admin"]}>
+                <UsersPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
@@ -91,7 +99,19 @@ function App() {
           path="/admin/reports" 
           element={
             <ProtectedRoute>
-              <ReportsPage />
+              <RequireRoles roles={["admin","owner"]}>
+                <ReportsPage />
+              </RequireRoles>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/media/upload" 
+          element={
+            <ProtectedRoute>
+              <RequireRoles roles={["publisher","admin","owner"]}>
+                <MediaUploadPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
@@ -99,7 +119,9 @@ function App() {
           path="/admin/settings" 
           element={
             <ProtectedRoute>
-              <SettingsPage />
+              <RequireRoles roles={["owner","admin"]}>
+                <SettingsPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
@@ -107,7 +129,9 @@ function App() {
           path="/admin/backend-status" 
           element={
             <ProtectedRoute>
-              <BackendStatusPage />
+              <RequireRoles roles={["owner","admin"]}>
+                <BackendStatusPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
@@ -115,7 +139,9 @@ function App() {
           path="/admin/notifications" 
           element={
             <ProtectedRoute>
-              <NotificationsPage />
+              <RequireRoles roles={["admin","owner"]}>
+                <NotificationsPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
@@ -139,7 +165,20 @@ function App() {
           path="/admin/audit-logs" 
           element={
             <ProtectedRoute>
-              <AuditLogsPage />
+              <RequireRoles roles={["owner","admin"]}>
+                <AuditLogsPage />
+              </RequireRoles>
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/roles" 
+          element={
+            <ProtectedRoute>
+              <RequireRoles roles={["owner","admin"]}>
+                <RolesPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
@@ -147,10 +186,14 @@ function App() {
           path="/admin/donations" 
           element={
             <ProtectedRoute>
-              <DonationsPage />
+              <RequireRoles roles={["admin","owner","publisher"]}>
+                <DonationsPage />
+              </RequireRoles>
             </ProtectedRoute>
           } 
         />
+        {/* Forbidden */}
+        <Route path="/admin/403" element={<ForbiddenPage />} />
         <Route 
           path="/admin/carts" 
           element={
@@ -159,7 +202,6 @@ function App() {
             </ProtectedRoute>
           } 
         />
-
         
         {/* Redirect root to admin login */}
         <Route path="/" element={<Navigate to="/admin/login" replace />} />

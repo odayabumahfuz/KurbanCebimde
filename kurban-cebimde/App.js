@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Constants from 'expo-constants';
+import { NativeModules } from 'react-native';
+import { registerGlobals, AudioSession } from '@livekit/react-native';
 
 import ThemeProvider from './src/providers/ThemeProvider';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -21,9 +24,11 @@ import LiveStreamScreen from './src/screens/LiveStreamScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import MyDonationsScreen from './src/screens/MyDonationsScreen';
-import CertificatesScreen from './src/screens/CertificatesScreen';
+// import CertificatesScreen from './src/screens/CertificatesScreen';
 import MyCardsScreen from './src/screens/MyCardsScreen';
-import ReportsScreen from './src/screens/ReportsScreen';
+// import ReportsScreen from './src/screens/ReportsScreen';
+import BroadcastHistoryScreen from './src/screens/BroadcastHistoryScreen';
+import MediaPackageScreen from './src/screens/MediaPackageScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
 import WatchLiveScreen from './src/screens/WatchLiveScreen';
 import StartLiveScreen from './src/screens/StartLiveScreen';
@@ -77,9 +82,11 @@ function RootNavigator() {
           <Stack.Screen name="Profil" component={ProfileScreen} />
           <Stack.Screen name="Ayarlarım" component={SettingsScreen} />
           <Stack.Screen name="Bağışlarım" component={MyDonationsScreen} />
-          <Stack.Screen name="Sertifikalarım" component={CertificatesScreen} />
+          {/* Sertifikalar kaldırıldı */}
           <Stack.Screen name="Kartlarım" component={MyCardsScreen} />
-          <Stack.Screen name="Raporlarım" component={ReportsScreen} />
+          {/* Raporlar kaldırıldı */}
+          <Stack.Screen name="Yayın Geçmişi" component={BroadcastHistoryScreen} />
+          <Stack.Screen name="Medya Paketi" component={MediaPackageScreen} />
           <Stack.Screen name="Kurban" component={DonateScreen} />
           <Stack.Screen name="Checkout" component={CheckoutScreen} />
           <Stack.Screen name="StartLive" component={StartLiveScreen} />
@@ -101,7 +108,26 @@ function RootNavigator() {
   );
 }
 
+// WebRTC global'lerini register et
+registerGlobals();
+
 export default function App() {
+  useEffect(() => {
+    // Native modül testi
+    console.log('🔍 Native Modül Testi:');
+    console.log('Has LiveKit native? ->', !!NativeModules.LiveKitReactNative);
+    console.log('Has WebRTC native?  ->', !!NativeModules.WebRTCModule);
+    console.log('Has RTCPeerConnection global? ->', !!global.RTCPeerConnection);
+    
+    // Audio session'ı başlat
+    AudioSession.startAudioSession();
+    console.log('✅ WebRTC globals register edildi, AudioSession başlatıldı');
+    
+    return () => {
+      AudioSession.stopAudioSession();
+    };
+  }, []);
+
   return (
     <LanguageProvider>
       <AuthProvider>

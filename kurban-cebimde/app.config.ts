@@ -17,8 +17,8 @@ const CONFIGS = {
     API_SERVER_URL: 'https://staging.kurbancebimde.com'
   },
   production: { 
-    API_BASE: 'https://api.kurbancebimde.com/api/v1',
-    API_SERVER_URL: 'https://api.kurbancebimde.com'
+    API_BASE: 'http://185.149.103.247:8000/api/v1',
+    API_SERVER_URL: 'http://185.149.103.247:8000'
   },
 } as const;
 
@@ -28,7 +28,7 @@ const expoConfig: ExpoConfig = {
   name: "Kurban Cebimde",
   slug: "kurban-cebimde",
   scheme: "kurbancebimde",
-  version: "1.0.0",
+  version: "1.0.1",
   runtimeVersion: {
     policy: "appVersion" // OTA için sabit bir kural; native değişmedikçe update atabilirsin
   },
@@ -55,10 +55,13 @@ const expoConfig: ExpoConfig = {
         }
       }
     ],
-    "expo-audio"
+    "expo-audio",
+    "@livekit/react-native-expo-plugin",
+    "@config-plugins/react-native-webrtc"
   ],
   android: {
     package: "com.kurbancebimde.app",
+    versionCode: 2,
     permissions: ["CAMERA", "RECORD_AUDIO", "INTERNET", "MODIFY_AUDIO_SETTINGS", "BLUETOOTH_CONNECT"],
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
@@ -69,20 +72,32 @@ const expoConfig: ExpoConfig = {
   },
   ios: {
     bundleIdentifier: "com.kurbancebimde.app",
+    buildNumber: "1.0.1",
     supportsTablet: true,
     infoPlist: {
       NSCameraUsageDescription: "Canlı yayın için kameraya erişim gerekir.",
       NSMicrophoneUsageDescription: "Canlı yayın için mikrofona erişim gerekir.",
       NSBluetoothAlwaysUsageDescription: "Ses aygıtlarına bağlanmak için Bluetooth erişimi gereklidir.",
       NSBluetoothPeripheralUsageDescription: "Ses aygıtlarına bağlanmak için Bluetooth erişimi gereklidir.",
-      ITSAppUsesNonExemptEncryption: false
+      NSLocalNetworkUsageDescription: "Yerel ağ üzerinden geliştirme sunucusuna bağlanmak için gereklidir.",
+      ITSAppUsesNonExemptEncryption: false,
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true,
+        NSExceptionDomains: {
+          "185.149.103.247": {
+            NSIncludesSubdomains: true,
+            NSExceptionAllowsInsecureHTTPLoads: true,
+            NSExceptionMinimumTLSVersion: "1.0"
+          }
+        }
+      }
     }
   },
   web: {
     favicon: "./assets/favicon.png"
   },
   jsEngine: "hermes",
-  newArchEnabled: true,
+  newArchEnabled: false,
   orientation: "portrait",
   icon: "./assets/icon.png",
   userInterfaceStyle: "light",

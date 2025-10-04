@@ -3,7 +3,7 @@ import { View, StyleSheet, Alert } from 'react-native';
 import LiveKitPlayer from '../components/live/LiveKitPlayer';
 
 export default function LiveKitStreamScreen({ route, navigation }) {
-  const { roomName, participantName, participantIdentity, streamId } = route.params;
+  const { roomName, participantName, participantIdentity, streamId, mode = 'viewer' } = route.params;
 
   useEffect(() => {
     // Screen'e geldiğinde başlığı güncelle
@@ -41,6 +41,7 @@ export default function LiveKitStreamScreen({ route, navigation }) {
         participantName={participantName}
         participantIdentity={participantIdentity}
         streamId={streamId}
+        mode={mode}
         onJoin={handleJoin}
         onLeave={handleLeave}
         onError={handleError}

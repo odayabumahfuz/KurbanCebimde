@@ -8,20 +8,11 @@ export default function CatalogPage() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="page-container space-y-6">
         {/* Page header */}
-        <div>
-          <h1 style={{
-            fontSize: '1.5rem',
-            fontWeight: '700',
-            color: '#111827'
-          }}>Katalog Yönetimi</h1>
-          <p style={{
-            color: '#6b7280',
-            marginTop: '0.25rem'
-          }}>
-            Kurban türleri, fiyatlar ve bölge bilgilerini yönetin
-          </p>
+        <div className="page-header">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Katalog Yönetimi</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Kurban türleri, fiyatlar ve bölge bilgilerini yönetin</p>
         </div>
 
         {/* Search and Filter */}
@@ -32,20 +23,20 @@ export default function CatalogPage() {
               placeholder="Ürün ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-field"
             />
           </div>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="select-field"
           >
             <option value="all">Tüm Kategoriler</option>
             <option value="cattle">Sığır</option>
             <option value="sheep">Koyun</option>
             <option value="goat">Keçi</option>
           </select>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+          <button className="btn-primary flex items-center gap-2">
             <Plus size={16} />
             Yeni Ürün
           </button>

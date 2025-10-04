@@ -107,7 +107,7 @@ async def create_livekit_token(request: LiveKitTokenRequest):
         raise HTTPException(status_code=500, detail=f"Failed to create token: {str(e)}")
 
 @router.get("/streams/{stream_id}/token")
-async def get_stream_token(stream_id: str, role: str = "subscriber"):
+async def get_stream_token(stream_id: str, role: str = "subscriber", identity: Optional[str] = None):
     """Get token for specific stream - README uyumlu endpoint"""
     try:
         # Role kontrolü
@@ -117,7 +117,7 @@ async def get_stream_token(stream_id: str, role: str = "subscriber"):
         # Stream bilgilerini DB'den al (şimdilik mock)
         room_name = f"stream_{stream_id}"
         participant_name = f"user_{stream_id}"
-        participant_identity = f"identity_{stream_id}"
+        participant_identity = identity or f"identity_{stream_id}_{int(time.time())}"
         
         # Role'e göre yetkiler
         can_publish = role == "publisher"

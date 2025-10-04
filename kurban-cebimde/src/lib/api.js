@@ -19,8 +19,8 @@ const DEV_BASE = (() => {
   return `http://${host || '127.0.0.1'}:8000`;
 })();
 
-// Use Constants from app.config.ts
-const API_BASE = Constants.expoConfig?.extra?.apiBase || 'http://10.0.2.2:8000/api/v1';
+// Use EXPO_PUBLIC_API_URL from eas.json or fallback to Constants from app.config.ts
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || Constants.expoConfig?.extra?.apiBase || 'http://10.0.2.2:8000/api/v1';
 const ENV = Constants.expoConfig?.extra?.env || 'development';
 
 console.log('🌐 ENV =', ENV);
@@ -53,7 +53,7 @@ export const adminAPI = {
 
 // LiveKit API için ayrı instance - Backend'deki admin endpoint'ini kullan
 export const livekitAPI = axios.create({
-  baseURL: `${API_BASE.replace('/api/v1', '/api/admin/v1')}`,
+  baseURL: `${API_BASE.replace('/api/v1', '/api/livekit/v1')}`,
   timeout: 60000
 });
 

@@ -1,0 +1,57 @@
+name: test
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: kc_test
+          POSTGRES_USER: kc_user
+          POSTGRES_PASSWORD: kc_pass
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd="pg_isready -U kc_user -d kc_test" --health-interval=5s --health-timeout=3s --health-retries=20
+      redis:
+        image: redis:7-alpine
+        ports: ["6380:6379"]
+        options: >-
+          --health-cmd="redis-cli ping" --health-interval=5s --health-timeout=3s --health-retries=20
+      minio:
+        image: minio/minio:latest
+        ports: ["9000:9000"]
+        env:
+          MINIO_ROOT_USER: kcminio
+          MINIO_ROOT_PASSWORD: kcminiopass
+        options: >-
+          --health-cmd="curl -f http://localhost:9000/minio/health/live || exit 1" --health-interval=5s --health-timeout=3s --health-retries=20
+        command: server /data
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements-test.txt
+      - run: python backend/scripts/seed_test_data.py || true
+
+      - name: Backend tests
+        run: pytest -q --maxfail=1 --disable-warnings
+        working-directory: backend
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: corepack enable && pnpm i && pnpm build
+        working-directory: kurban-cebimde/admin-panel
+      - run: npx playwright install --with-deps
+        working-directory: kurban-cebimde/admin-panel
+      - run: npx playwright test --reporter=dot
+        working-directory: kurban-cebimde/admin-panel

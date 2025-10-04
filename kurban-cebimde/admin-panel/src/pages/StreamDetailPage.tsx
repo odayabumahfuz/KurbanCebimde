@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import { Video, Play, Square, Users, Clock, MapPin, Eye, Settings } from 'lucide-react';
 import { livekitAPI } from '../lib/livekitApi';
 import { adminApi } from '../lib/adminApi';
+import { liveAPI } from '../lib/liveApi';
+import StreamViewer from '../components/StreamViewer';
 import Layout from '../components/Layout';
 
 const StreamDetailPage: React.FC = () => {
@@ -11,6 +13,10 @@ const StreamDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [viewers, setViewers] = useState(0);
   const [isWatching, setIsWatching] = useState(false);
+  const [token, setToken] = useState<string>('');
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [showTokenModal, setShowTokenModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -42,10 +48,20 @@ const StreamDetailPage: React.FC = () => {
     }
   };
 
-  const handleJoinStream = () => {
-    setIsWatching(true);
-    // Yayına katılma logic'i burada olacak
-    // Şimdilik sadece state'i güncelliyoruz
+  const handleJoinStream = async () => {
+    if (!id || !streamData?.room_name) return;
+    try {
+      setTokenLoading(true);
+      setTokenError(null);
+      const res = await liveAPI.getToken('admin', streamData.room_name);
+      setToken(res?.token || res?.access_token || '');
+      setIsWatching(true);
+    } catch (e: any) {
+      setTokenError(e?.message || 'Token alınamadı');
+      alert(e?.message || 'Token alınamadı');
+    } finally {
+      setTokenLoading(false);
+    }
   };
 
   const handleEndStream = async () => {
@@ -58,6 +74,23 @@ const StreamDetailPage: React.FC = () => {
         console.error('Yayın sonlandırma hatası:', error);
         alert('Yayın sonlandırılamadı');
       }
+    }
+  };
+
+  const handleGenerateToken = async () => {
+    if (!id || !streamData?.room_name) return;
+    try {
+      setTokenLoading(true);
+      setTokenError(null);
+      const res = await liveAPI.getToken('admin', streamData.room_name);
+      const t = res?.token || res?.access_token || '';
+      setToken(t);
+      setShowTokenModal(true);
+    } catch (e: any) {
+      setTokenError(e?.message || 'Token alınamadı');
+      alert(e?.message || 'Token alınamadı');
+    } finally {
+      setTokenLoading(false);
     }
   };
 
@@ -159,7 +192,7 @@ const StreamDetailPage: React.FC = () => {
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
                 >
                   <Eye size={20} />
-                  {isWatching ? 'Yayını İzle' : 'Yayına Katıl'}
+                  {tokenLoading ? 'Token alınıyor...' : (isWatching ? 'Yayını İzle' : 'Yayına Katıl')}
                 </button>
                 <button
                   onClick={handleEndStream}
@@ -167,6 +200,13 @@ const StreamDetailPage: React.FC = () => {
                 >
                   <Square size={20} />
                   Yayını Sonlandır
+                </button>
+                <button
+                  onClick={handleGenerateToken}
+                  className="flex items-center gap-2 bg-zinc-700 hover:bg-zinc-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                >
+                  <Settings size={20} />
+                  Token Üret
                 </button>
               </>
             ) : (
@@ -178,19 +218,22 @@ const StreamDetailPage: React.FC = () => {
                 Bilgileri Yenile
               </button>
             )}
+            <button
+              onClick={()=> window.location.href = '/admin/streams'}
+              className="flex items-center gap-2 bg-zinc-600 hover:bg-zinc-500 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              <Video size={20} />
+              Yayın Arşivi
+            </button>
           </div>
         </div>
 
         {/* Stream Player Placeholder */}
-        {isWatching && streamData.status === 'live' && (
+        {isWatching && streamData.status === 'live' && token && (
           <div className="bg-zinc-900 rounded-xl shadow-sm border border-zinc-800 p-6">
             <h2 className="text-xl font-semibold text-zinc-100 mb-4">Canlı Yayın</h2>
-            <div className="bg-black rounded-lg aspect-video flex items-center justify-center">
-              <div className="text-center">
-                <Video className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-                <p className="text-zinc-400">Yayın player'ı burada olacak</p>
-                <p className="text-zinc-500 text-sm mt-2">LiveKit entegrasyonu ile</p>
-              </div>
+            <div className="bg-black rounded-lg aspect-video overflow-hidden">
+              <StreamViewer streamId={id || ''} roomName={streamData.room_name} token={token} />
             </div>
           </div>
         )}
@@ -254,6 +297,20 @@ const StreamDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {showTokenModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={()=>setShowTokenModal(false)}>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-6 w-full max-w-lg" onClick={(e)=>e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-3">Erişim Token</h3>
+            <div className="bg-zinc-100 dark:bg-zinc-800 rounded p-3 font-mono text-xs break-all">
+              {token || 'Token yok'}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={()=>{ navigator.clipboard.writeText(token); alert('Kopyalandı'); }} className="px-3 py-2 rounded bg-zinc-200 dark:bg-zinc-800">Kopyala</button>
+              <button onClick={()=>setShowTokenModal(false)} className="px-3 py-2 rounded bg-blue-600 text-white">Kapat</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

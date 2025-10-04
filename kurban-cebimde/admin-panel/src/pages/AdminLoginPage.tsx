@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { adminApi, AdminLoginRequest } from '../lib/adminApi';
+import { AdminLoginRequest } from '../lib/adminApi';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, User, Lock, ArrowRight } from 'lucide-react';
+import { useAuthStore } from '../stores/authStore';
 
 const AdminLoginPage: React.FC = () => {
   const [credentials, setCredentials] = useState<AdminLoginRequest>({
@@ -22,8 +23,9 @@ const AdminLoginPage: React.FC = () => {
 
     try {
       console.log('Giriş yapılıyor...', credentials);
-      const response = await adminApi.login(credentials);
-      console.log('Login successful:', response.user);
+      const login = useAuthStore.getState().login;
+      await login(credentials.phoneOrEmail, credentials.password);
+      console.log('Login successful');
       
       // Dashboard'a yönlendir
       console.log('Dashboard\'a yönlendiriliyor...');
@@ -62,7 +64,7 @@ const AdminLoginPage: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label htmlFor="phoneOrEmail" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                 Kullanıcı Adı
               </label>
               <div className="relative">

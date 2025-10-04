@@ -1,54 +1,74 @@
 {
-  "cli": { 
-    "version": ">= 3.18.0",
+  "cli": {
+    "version": ">= 13.0.0",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "APP_ENV": "development" },
+      "env": {
+        "APP_ENV": "development"
+      },
       "android": {
         "gradleCommand": ":app:assembleDebug",
         "buildType": "apk"
       },
       "ios": {
         "buildConfiguration": "Debug",
-        "simulator": true
-      }
+        "image": "macos-sonoma-14.6-xcode-16.1",
+        "resourceClass": "m-medium",
+        "simulator": false
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
-      "env": { "APP_ENV": "preview" },
+      "env": {
+        "APP_ENV": "preview"
+      },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release"
-      }
+        "buildConfiguration": "Release",
+        "image": "macos-sonoma-14.6-xcode-16.1"
+      },
+      "channel": "preview"
     },
     "staging": {
       "distribution": "internal",
-      "env": { "APP_ENV": "staging" },
+      "env": {
+        "APP_ENV": "staging"
+      },
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release"
-      }
+        "buildConfiguration": "Release",
+        "image": "macos-sonoma-14.6-xcode-16.1"
+      },
+      "channel": "staging"
     },
     "production": {
-      "env": { "APP_ENV": "production" },
+      "distribution": "store",
+      "env": {
+        "APP_ENV": "production",
+        "EXPO_PUBLIC_API_URL": "http://185.149.103.247:8000/api/v1"
+      },
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease"
       },
       "ios": {
-        "buildConfiguration": "Release"
-      }
+        "buildConfiguration": "Release",
+        "resourceClass": "m-medium",
+        "image": "macos-sonoma-14.6-xcode-16.1"
+      },
+      "channel": "production"
     }
   },
   "submit": {

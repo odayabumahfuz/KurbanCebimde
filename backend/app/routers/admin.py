@@ -6,42 +6,422 @@ import uuid
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from pydantic_settings import BaseSettings
+from ..services.storage_service import storage_service
 
 router = APIRouter(tags=["admin"])
 class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+psycopg2://postgres:password@postgres:5432/kurban_cebimde"
     LIVEKIT_API_KEY: str = "APIjcAygxUNnX6kb"
     LIVEKIT_API_SECRET: str = "your-livekit-secret-key"  # TODO: LiveKit Cloud'dan gerçek secret al
+    # JWT için tek kaynak: docker-compose ile gelen SECRET_KEY'i kullan
+    # Not: Önceden kullanılan anahtar ile uyum için varsayılanı koruyoruz
+    SECRET_KEY: str = "your-secret-key-change-in-production"
 
 settings = Settings()
 engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
+async def _validate_admin_token(authorization: Optional[str] = Header(default=None)):
+    """Admin endpoint'leri için token validation"""
+    import jwt  # type: ignore
+    try:
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Token gerekli")
+        token = authorization.split(" ")[1]
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])  # type: ignore
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Geçersiz token")
+        with engine.connect() as conn:
+            result = conn.execute(text(
+                """
+                SELECT id, COALESCE(is_admin, FALSE) as is_admin,
+                       COALESCE(is_super_admin, FALSE) as is_super_admin
+                FROM users WHERE id = :user_id
+                """
+            ), {"user_id": user_id}).fetchone()
+            if not result:
+                raise HTTPException(status_code=401, detail="Kullanıcı bulunamadı")
+            if not result.is_admin and not result.is_super_admin:
+                raise HTTPException(status_code=403, detail="Admin yetkisi gerekli")
+            return result.id
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Token doğrulama hatası: {str(e)}")
+
 async def send_stream_notification(stream_id: str, stream_title: str):
-    """Bağış sahibine yayın bildirimi gönder"""
+    """Bağış sahibine yayın bildirimi gönder (Expo Push ile gerçek tetikleme)"""
     try:
         with engine.connect() as conn:
-            # Stream'in sahibini bul
-            stream_owner = conn.execute(text("""
+            # Stream sahibini ve aktif push token'larını çek
+            owner = conn.execute(text("""
                 SELECT s.user_id, u.phone, u.name
                 FROM streams s
                 JOIN users u ON s.user_id = u.id
                 WHERE s.id = :stream_id
             """), {"stream_id": stream_id}).fetchone()
-            
-            if stream_owner:
-                # SMS bildirimi gönder (simülasyon)
-                print(f"📱 SMS gönderiliyor: {stream_owner.phone}")
-                print(f"📝 Mesaj: Merhaba {stream_owner.name}, '{stream_title}' yayını 5 dakika içinde başlayacak!")
-                
-                # Push notification gönder (simülasyon)
-                print(f"🔔 Push bildirimi gönderiliyor: {stream_owner.name}")
-                print(f"📝 Bildirim: Yayınınız 5 dakika içinde başlayacak!")
-                
-                return True
+
+            if not owner:
+                return False
+
+            tokens = conn.execute(text("""
+                SELECT expo_push_token, platform
+                FROM user_push_tokens
+                WHERE user_id = :user_id
+                ORDER BY updated_at DESC
+            """), {"user_id": owner.user_id}).fetchall()
+
+            if not tokens:
+                print("Push token yok, bildirim atlanıyor")
+                return False
+
+            import requests, json
+            expo_api = "https://exp.host/--/api/v2/push/send"
+            payload = {
+                "to": [t.expo_push_token for t in tokens],
+                "title": "📺 Canlı Yayın",
+                "body": f"{stream_title}: Yayın başladı",
+                "data": {"type": "stream", "stream_id": stream_id, "title": stream_title},
+                "sound": "default",
+                "badge": 1
+            }
+            resp = requests.post(expo_api, headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Accept-encoding": "gzip, deflate"
+            }, data=json.dumps(payload), timeout=10)
+            print("Expo push response:", resp.status_code, resp.text[:200])
+            return resp.status_code == 200
     except Exception as e:
         print(f"Bildirim gönderme hatası: {e}")
         return False
+
+
+# ---- Media (Admin) Endpoints ----
+from fastapi import Body
+
+class UploadUrlRequest(BaseModel):
+    donationId: str
+    broadcastId: str
+    mimeType: str
+    sizeBytes: Optional[int] = None
+
+@router.post("/media/upload-url")
+async def get_upload_url(req: UploadUrlRequest, _: str = Depends(_validate_admin_token)):
+    try:
+        # storage key: media/YYYY/MM/<donation>/<timestamp>.ext
+        import datetime, uuid as pyuuid
+        now = datetime.datetime.utcnow()
+        ext = {
+            "image/jpeg": ".jpg",
+            "image/png": ".png",
+            "video/mp4": ".mp4",
+        }.get(req.mimeType, "")
+        key = f"media/{now.year}/{now.month:02d}/{req.donationId}/{pyuuid.uuid4()}{ext}"
+        url = storage_service.presign_put(key, req.mimeType, req.sizeBytes)
+        return {"uploadUrl": url, "storageKey": key}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class CommitRequest(BaseModel):
+    storageKey: str
+    donationId: Optional[str] = None
+    broadcastId: Optional[str] = None
+    mimeType: str
+    width: Optional[int] = None
+    height: Optional[int] = None
+    durationSeconds: Optional[int] = None
+    sizeBytes: Optional[int] = None
+
+@router.post("/media/commit")
+async def commit_media(req: CommitRequest, _: str = Depends(_validate_admin_token)):
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("""
+                INSERT INTO media_assets (
+                    owner_donation_id, broadcast_id, storage_key, mime_type,
+                    duration_seconds, width, height, size_bytes, status, created_by, created_at
+                ) VALUES (
+                    :donation_id, :broadcast_id, :storage_key, :mime_type,
+                    :duration_seconds, :width, :height, :size_bytes, 'uploaded', NULL, NOW()
+                )
+                RETURNING id, status
+            """), {
+                "donation_id": req.donationId,
+                "broadcast_id": req.broadcastId,
+                "storage_key": req.storageKey,
+                "mime_type": req.mimeType,
+                "duration_seconds": req.durationSeconds,
+                "width": req.width,
+                "height": req.height,
+                "size_bytes": req.sizeBytes,
+            })
+            res = conn.fetchone()
+            conn.commit()
+            return {"assetId": res.id, "status": res.status}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Review & Package endpoints (skeletons for sprint)
+class ReviewRequest(BaseModel):
+    action: str  # approve | reject
+    note: Optional[str] = None
+
+@router.get("/media")
+async def list_media(status: Optional[str] = None, donationId: Optional[str] = None, _: str = Depends(_validate_admin_token)):
+    query = "SELECT id, owner_donation_id, storage_key, mime_type, status, created_at FROM media_assets"
+    params = {}
+    clauses = []
+    if status:
+        clauses.append("status = :status")
+        params["status"] = status
+    if donationId:
+        clauses.append("owner_donation_id = :donation_id")
+        params["donation_id"] = donationId
+    if clauses:
+        query += " WHERE " + " AND ".join(clauses)
+    query += " ORDER BY created_at DESC LIMIT 200"
+    with engine.connect() as conn:
+        rows = conn.execute(text(query), params).fetchall()
+        return {"items": [dict(r._mapping) for r in rows]}
+
+@router.patch("/media/{asset_id}/review")
+async def review_media(asset_id: str, req: ReviewRequest, _: str = Depends(_validate_admin_token)):
+    if req.action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="invalid action")
+    new_status = "approved" if req.action == "approve" else "rejected"
+    with engine.connect() as conn:
+        conn.execute(text("""
+            UPDATE media_assets SET status = :st, reviewed_at = NOW() WHERE id = :id
+        """), {"st": new_status, "id": asset_id})
+        conn.commit()
+    return {"assetId": asset_id, "status": new_status}
+
+class CreatePackageRequest(BaseModel):
+    donationId: str
+    title: str
+    note: Optional[str] = None
+
+@router.post("/media-packages")
+async def create_package(req: CreatePackageRequest, _: str = Depends(_validate_admin_token)):
+    with engine.connect() as conn:
+        row = conn.execute(text("""
+            INSERT INTO media_packages (donation_id, title, note, status, created_by, created_at)
+            VALUES (:donation_id, :title, :note, 'draft', NULL, NOW())
+            RETURNING id, status
+        """), {"donation_id": req.donationId, "title": req.title, "note": req.note}).fetchone()
+        conn.commit()
+        return {"packageId": row.id, "status": row.status}
+
+class AddItemsRequest(BaseModel):
+    mediaAssetIds: List[str]
+    positions: Optional[List[int]] = None
+
+@router.post("/media-packages/{package_id}/items")
+async def add_items(package_id: str, req: AddItemsRequest, _: str = Depends(_validate_admin_token)):
+    with engine.connect() as conn:
+        for idx, asset_id in enumerate(req.mediaAssetIds):
+            pos = req.positions[idx] if req.positions and idx < len(req.positions) else idx
+            conn.execute(text("""
+                INSERT INTO media_package_items (package_id, media_asset_id, position)
+                VALUES (:pid, :aid, :pos)
+                ON CONFLICT (package_id, media_asset_id) DO UPDATE SET position = EXCLUDED.position
+            """), {"pid": package_id, "aid": asset_id, "pos": pos})
+        conn.commit()
+    return {"packageId": package_id, "itemsCount": len(req.mediaAssetIds)}
+
+class UpdatePackageRequest(BaseModel):
+    status: str  # published | draft
+
+@router.patch("/media-packages/{package_id}")
+async def update_package(package_id: str, req: UpdatePackageRequest, _: str = Depends(_validate_admin_token)):
+    if req.status not in ("published", "draft"):
+        raise HTTPException(status_code=400, detail="invalid status")
+    with engine.connect() as conn:
+        donation_id = conn.execute(text("SELECT donation_id FROM media_packages WHERE id = :id"), {"id": package_id}).scalar()
+        if req.status == "published":
+            conn.execute(text("""
+                UPDATE media_packages SET status = 'published', published_at = NOW() WHERE id = :id
+            """), {"id": package_id})
+        else:
+            conn.execute(text("""
+                UPDATE media_packages SET status = 'draft', published_at = NULL WHERE id = :id
+            """), {"id": package_id})
+        conn.commit()
+    # Push notification to donor when published
+    if req.status == "published" and donation_id:
+        try:
+            with engine.connect() as conn:
+                user_id = conn.execute(text("SELECT user_id FROM donations WHERE id = :did"), {"did": donation_id}).scalar()
+                if user_id:
+                    tokens = conn.execute(text("""
+                        SELECT expo_push_token FROM user_push_tokens WHERE user_id = :uid ORDER BY updated_at DESC
+                    """), {"uid": user_id}).fetchall()
+                    if tokens:
+                        import requests, json
+                        expo_api = "https://exp.host/--/api/v2/push/send"
+                        expo_tokens = [t.expo_push_token for t in tokens]
+                        deeplink = f"kurbancebimde://media-package/{package_id}"
+                        payload = {
+                            "to": expo_tokens,
+                            "title": "Kesim Görselleriniz Hazır",
+                            "body": "Kurban kesim medya paketiniz yayına alındı. İncelemek için dokunun.",
+                            "data": {"type": "media_package", "packageId": str(package_id), "url": deeplink},
+                            "sound": "default",
+                            "badge": 1
+                        }
+                        requests.post(
+                            expo_api,
+                            headers={"Content-Type": "application/json", "Accept": "application/json", "Accept-encoding": "gzip, deflate"},
+                            data=json.dumps(payload),
+                            timeout=10,
+                        )
+        except Exception as e:
+            print("Publish push error:", e)
+    return {"packageId": package_id, "status": req.status}
+
+# ---------- Dashboard & Reports Endpoints ----------
+@router.get("/metrics/summary")
+async def metrics_summary(_: str = Depends(_validate_admin_token)):
+    try:
+        with engine.connect() as conn:
+            total_users = conn.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
+            active_users = conn.execute(text("SELECT COUNT(*) FROM users WHERE COALESCE(is_active, TRUE) = TRUE")).scalar() or 0
+            donations_sum_7d = conn.execute(text(
+                """
+                SELECT COALESCE(SUM(amount),0)
+                FROM donations
+                WHERE COALESCE(created_at, NOW()) >= NOW() - INTERVAL '7 days'
+                """
+            )).scalar() or 0
+            active_broadcasts = conn.execute(text("SELECT COUNT(*) FROM streams WHERE COALESCE(status,'draft') = 'live'")) .scalar() or 0
+        return {
+            "total_users": int(total_users),
+            "active_users": int(active_users),
+            "donations_sum_7d": float(donations_sum_7d),
+            "active_broadcasts": int(active_broadcasts),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/reports/donations/trend")
+async def donations_trend(range: str = "7d", _: str = Depends(_validate_admin_token)):
+    try:
+        # Sadece 7d destekliyoruz şimdilik
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                """
+                SELECT to_char(date_trunc('day', COALESCE(created_at, NOW())), 'YYYY-MM-DD') as date,
+                       COALESCE(SUM(amount),0) as amount
+                FROM donations
+                WHERE COALESCE(created_at, NOW()) >= NOW() - INTERVAL '7 days'
+                GROUP BY 1
+                ORDER BY 1
+                """
+            )).mappings().all()
+        return {"items": [{"date": r["date"], "amount": float(r["amount"]) } for r in rows]}
+    except Exception as e:
+        return {"items": []}
+
+
+@router.get("/reports/broadcasts/avg-viewers")
+async def reports_avg_viewers(_: str = Depends(_validate_admin_token)):
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                """
+                SELECT COALESCE(title,'Yayın') as title,
+                       COALESCE(AVG(COALESCE(viewers,0)),0) as avg
+                FROM streams
+                GROUP BY 1
+                ORDER BY avg DESC
+                LIMIT 5
+                """
+            )).mappings().all()
+        return {"items": [{"title": r["title"], "avg": float(r["avg"]) } for r in rows]}
+    except Exception:
+        return {"items": []}
+
+
+@router.get("/audit")
+async def audit_latest(size: int = 10, _: str = Depends(_validate_admin_token)):
+    try:
+        with engine.connect() as conn:
+            exists = conn.execute(text(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = 'audit_logs'
+                );
+                """
+            )).scalar()
+            if not exists:
+                return {"items": []}
+            rows = conn.execute(text(
+                """
+                SELECT id, COALESCE(ts, NOW()) as ts, COALESCE(actor,'system') as actor,
+                       COALESCE(action,'unknown') as action, target
+                FROM audit_logs
+                ORDER BY ts DESC
+                LIMIT :size
+                """
+            ), {"size": size}).mappings().all()
+        items = [{
+            "id": str(r["id"]),
+            "ts": (r["ts"].isoformat() if hasattr(r["ts"], 'isoformat') else str(r["ts"])),
+            "actor": r["actor"],
+            "action": r["action"],
+            "target": r.get("target")
+        } for r in rows]
+        return {"items": items}
+    except Exception:
+        return {"items": []}
+
+# ---------- Notifications (list) ----------
+@router.get("/notifications")
+async def list_notifications(page: int = 1, size: int = 20, _: str = Depends(_validate_admin_token)):
+    try:
+        with engine.connect() as conn:
+            # tablo var mı kontrol
+            exists = conn.execute(text(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = 'notifications'
+                );
+                """
+            )).scalar()
+            if not exists:
+                return {"items": [], "page": page, "size": size, "total": 0}
+            offset = (page - 1) * size
+            rows = conn.execute(text(
+                """
+                SELECT id, user_id, title, message, COALESCE(channel,'push') AS channel,
+                       COALESCE(status,'pending') AS status,
+                       COALESCE(sent_at, created_at) AS sent_at
+                FROM notifications
+                ORDER BY COALESCE(sent_at, created_at) DESC
+                LIMIT :size OFFSET :offset
+                """
+            ), {"size": size, "offset": offset}).mappings().all()
+            total = conn.execute(text("SELECT COUNT(*) FROM notifications")).scalar() or 0
+        items = [
+            {
+                "id": str(r["id"]),
+                "user_id": str(r["user_id"]) if r.get("user_id") else None,
+                "title": r.get("title"),
+                "message": r.get("message"),
+                "channel": r.get("channel"),
+                "status": r.get("status"),
+                "sent_at": (r.get("sent_at").isoformat() if hasattr(r.get("sent_at"), 'isoformat') else r.get("sent_at"))
+            }
+            for r in rows
+        ]
+        return {"items": items, "page": page, "size": size, "total": int(total)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def get_db():
     db = SessionLocal()
@@ -86,12 +466,6 @@ async def _validate_admin_token(authorization: Optional[str] = Header(default=No
     """Admin endpoint'leri için token validation"""
     # JWT import'unu fonksiyonun başında yap
     import jwt
-    from pydantic_settings import BaseSettings
-    
-    class Settings(BaseSettings):
-        SECRET_KEY: str = "your-secret-key-change-in-production"
-    
-    settings = Settings()
     
     try:
         if not authorization or not authorization.startswith("Bearer "):
@@ -159,11 +533,6 @@ async def admin_login(payload: LoginRequest):
             import jwt
             from datetime import datetime, timedelta
             
-            class Settings(BaseSettings):
-                SECRET_KEY: str = "your-secret-key-change-in-production"
-            
-            settings = Settings()
-            
             # Access token oluştur
             access_payload = {
                 "user_id": user_result.id,
@@ -213,20 +582,33 @@ async def admin_login(payload: LoginRequest):
         raise HTTPException(status_code=500, detail="Giriş sırasında hata oluştu")
 
 
+@router.get("/roles")
+async def list_roles(_: str = Depends(_validate_admin_token)):
+    # Basit stub
+    return {"roles": ["owner","admin","publisher","viewer","super_admin"]}
+
+class MatrixEntry(BaseModel):
+    page: str
+    permissions: dict
+
+@router.get("/roles/matrix")
+async def get_role_matrix(_: str = Depends(_validate_admin_token)):
+    matrix = [
+        {"page":"dashboard","permissions":{"view":["owner","admin","publisher","viewer"]}},
+        {"page":"users","permissions":{"view":["owner","admin"],"update":["owner","admin"]}},
+        {"page":"donations","permissions":{"view":["owner","admin","publisher"]}},
+    ]
+    return {"matrix": matrix}
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
-
 
 @router.post("/auth/refresh")
 async def refresh_token(payload: RefreshRequest):
     try:
         import jwt
         from datetime import datetime, timedelta
-        
-        class Settings(BaseSettings):
-            SECRET_KEY: str = "your-secret-key-change-in-production"
-        
-        settings = Settings()
         
         if not payload.refresh_token:
             raise HTTPException(status_code=400, detail="refresh_token is required")
@@ -368,16 +750,53 @@ async def list_users(_: str = Depends(_validate_admin_token)):
                 return UsersResponse(items=[], total=0, page=1, size=100)
             
             rows = conn.execute(text("""
-                SELECT id, COALESCE(name,'') AS name, COALESCE(surname,'') AS surname,
-                       COALESCE(email,'') AS email, COALESCE(phone,'') AS phone,
-                       COALESCE(role,'kullanıcı') AS role,
-                       COALESCE(is_admin, FALSE) AS is_admin,
-                       COALESCE(is_super_admin, FALSE) AS is_super_admin,
-                       COALESCE(is_active, TRUE) AS is_active,
-                       COALESCE(created_at, NOW()) AS created_at,
-                       TRUE AS is_verified
-                FROM users
-                ORDER BY created_at DESC
+                SELECT 
+                  u.id,
+                  COALESCE(u.name,'') AS name,
+                  COALESCE(u.surname,'') AS surname,
+                  COALESCE(u.email,'') AS email,
+                  COALESCE(u.phone,'') AS phone,
+                  COALESCE(u.role,'kullanıcı') AS role,
+                  COALESCE(u.is_admin, FALSE) AS is_admin,
+                  COALESCE(u.is_super_admin, FALSE) AS is_super_admin,
+                  COALESCE(u.is_active, FALSE) AS is_enabled,
+                  CASE 
+                    WHEN EXISTS (
+                      SELECT 1 FROM information_schema.tables 
+                      WHERE table_schema = 'public' AND table_name = 'user_sessions'
+                    ) THEN EXISTS (
+                      SELECT 1 FROM user_sessions s 
+                      WHERE s.user_id = u.id AND COALESCE(s.expires_at, NOW() - INTERVAL '1 second') > NOW()
+                    )
+                    ELSE FALSE
+                  END AS is_online,
+                  -- Geriye uyumluluk: eski frontend alanı
+                  CASE 
+                    WHEN EXISTS (
+                      SELECT 1 FROM information_schema.tables 
+                      WHERE table_schema = 'public' AND table_name = 'user_sessions'
+                    ) THEN EXISTS (
+                      SELECT 1 FROM user_sessions s 
+                      WHERE s.user_id = u.id AND COALESCE(s.expires_at, NOW() - INTERVAL '1 second') > NOW()
+                    )
+                    ELSE FALSE
+                  END AS is_active,
+                  CASE 
+                    WHEN EXISTS (
+                      SELECT 1 FROM information_schema.tables 
+                      WHERE table_schema = 'public' AND table_name = 'user_sessions'
+                    ) THEN (
+                      SELECT MAX(COALESCE(s.last_activity, s.started_at)) FROM user_sessions s WHERE s.user_id = u.id
+                    )
+                    ELSE NULL
+                  END AS last_seen,
+                  COALESCE(u.created_at, NOW()) AS created_at,
+                  CASE 
+                    WHEN COALESCE(u.email,'') <> '' OR COALESCE(u.phone,'') <> '' THEN TRUE
+                    ELSE FALSE
+                  END AS is_verified
+                FROM users u
+                ORDER BY u.created_at DESC
                 LIMIT 100
             """)).mappings().all()
             items = [dict(r) for r in rows]
@@ -412,12 +831,26 @@ async def list_donations(_: str = Depends(_validate_admin_token)):
                 return DonationsResponse(items=[], total=0, page=1, size=100)
             
             rows = conn.execute(text("""
-                SELECT d.id, d.user_id, d.amount, COALESCE(d.status,'bekliyor') AS status,
-                       COALESCE(d.created_at, NOW()) AS created_at,
-                       u.name, u.surname, u.phone
+                SELECT 
+                  d.id, d.user_id, d.amount, 
+                  COALESCE(d.status,'bekliyor') AS status,
+                  COALESCE(d.created_at, NOW()) AS created_at,
+                  u.name, u.surname, u.phone,
+                  CASE WHEN EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema='public' AND table_name='donations' AND column_name='animal_type'
+                  ) THEN d.animal_type ELSE NULL END AS animal_type,
+                  CASE WHEN EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema='public' AND table_name='donations' AND column_name='animal_count'
+                  ) THEN d.animal_count ELSE NULL END AS animal_count,
+                  CASE WHEN EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema='public' AND table_name='donations' AND column_name='slaughter_intent'
+                  ) THEN d.slaughter_intent ELSE NULL END AS slaughter_intent
                 FROM donations d
                 LEFT JOIN users u ON d.user_id = u.id
-                ORDER BY id DESC
+                ORDER BY d.created_at DESC
                 LIMIT 100
             """)).mappings().all()
             items = [dict(r) for r in rows]
@@ -461,6 +894,14 @@ async def list_streams(
                    COALESCE(s.animal_count,1) AS animal_count,
                    COALESCE(s.viewers,0) AS viewers,
                    COALESCE(s.duration,'0:00') AS duration,
+                   CASE WHEN EXISTS (
+                     SELECT 1 FROM information_schema.columns 
+                     WHERE table_schema='public' AND table_name='streams' AND column_name='animal_type'
+                   ) THEN s.animal_type ELSE NULL END AS animal_type,
+                   CASE WHEN EXISTS (
+                     SELECT 1 FROM information_schema.columns 
+                     WHERE table_schema='public' AND table_name='streams' AND column_name='slaughter_intent'
+                   ) THEN s.slaughter_intent ELSE NULL END AS slaughter_intent,
                    COALESCE(s.created_at, NOW()) AS created_at,
                    COALESCE(s.started_at, NULL) AS started_at,
                    COALESCE(s.ended_at, NULL) AS ended_at,
@@ -868,7 +1309,7 @@ async def start_stream(stream_id: str, _: str = Depends(_validate_admin_token)):
             
             conn.commit()
             
-            # Bağış sahibine bildirim gönder
+            # Bağış sahibine push bildirimi gönder
             try:
                 await send_stream_notification(stream_id, stream.title)
             except Exception as notification_error:

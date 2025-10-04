@@ -5,6 +5,18 @@ import { colors } from '../../theme/colors';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { AGORA_APP_ID } from '../../lib/agoraConfig';
 
+// Conditional import to avoid web build issues
+let AgoraRtcEngine, AgoraRtcTextureView;
+if (Platform.OS !== 'web') {
+  try {
+    const agoraSDK = require('react-native-agora');
+    AgoraRtcEngine = agoraSDK.default;
+    AgoraRtcTextureView = agoraSDK.AgoraRtcTextureView;
+  } catch (error) {
+    console.log('Agora SDK not available:', error.message);
+  }
+}
+
 // Gerçek Agora SDK ile yayın
 export default function LivePlayer({ channel, token, role = 'audience' }) {
   const [isStreaming, setIsStreaming] = useState(false);

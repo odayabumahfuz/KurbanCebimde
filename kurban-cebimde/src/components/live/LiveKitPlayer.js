@@ -14,6 +14,8 @@ import { Audio } from 'expo-audio';
 import Constants from 'expo-constants';
 import { LIVEKIT_CONFIG } from '../../lib/livekitConfig';
 import { livekitAPI } from '../../lib/api';
+import { LiveKitRoom, VideoView, useParticipants, useLocalParticipant } from '@livekit/react-native';
+import { atob as base64Atob } from 'react-native-quick-base64';
 
 // API Base URL
 const API_BASE_URL = 'http://185.149.103.247:8000/api';
@@ -25,34 +27,30 @@ const LiveKitPlayer = ({
   participantName, 
   participantIdentity,
   streamId,
+  mode = 'viewer', // 'viewer' | 'publisher'
   onJoin,
   onLeave,
   onError 
 }) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOn, setIsCameraOn] = useState(true);
-  const [participants, setParticipants] = useState([]);
   const [token, setToken] = useState(null);
   const [error, setError] = useState(null);
-  const [localParticipant, setLocalParticipant] = useState(null);
-  const [remoteParticipants, setRemoteParticipants] = useState([]);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, setMicrophonePermission] = useState(null);
-  const [cameraRef, setCameraRef] = useState(null);
-  const [recording, setRecording] = useState(null);
+  const tokenRef = useRef(null);
+  const isFetchingTokenRef = useRef(false);
+  const shouldPublish = mode === 'publisher';
+  const [canPublishGrant, setCanPublishGrant] = useState(null); // null=unknown, true/false from token
   
-  const roomRef = useRef(null);
-
+  const lastStreamIdRef = useRef(null);
   useEffect(() => {
+    // Aynı streamId için tekrar tetiklemeyi engelle
+    if (lastStreamIdRef.current === streamId) return;
+    lastStreamIdRef.current = streamId;
+    if (shouldPublish) {
     requestPermissions();
-    initializeLiveKit();
-    return () => {
-      if (roomRef.current) {
-        roomRef.current.disconnect();
       }
-    };
-  }, []);
+    fetchToken();
+  }, [streamId]);
 
   const requestPermissions = async () => {
     try {
@@ -76,25 +74,21 @@ const LiveKitPlayer = ({
         console.log('Kamera izni zaten verilmiş');
       }
       
-      // Mikrofon izni
+      // Mikrofon izni - expo-camera ile
       console.log('Mikrofon izni isteniyor...');
-      const audioStatus = await Audio.requestPermissionsAsync();
+      try {
+        const { Camera } = await import('expo-camera');
+        const audioStatus = await Camera.requestMicrophonePermissionsAsync();
       console.log('Mikrofon izni sonucu:', audioStatus);
       setMicrophonePermission(audioStatus.status === 'granted');
-      
-      if (audioStatus.status !== 'granted') {
-        Alert.alert(
-          'Mikrofon İzni Gerekli', 
-          'Canlı yayın için mikrofon erişimi gereklidir. Ayarlardan izin verebilirsiniz.',
-          [
-            { text: 'Tamam', style: 'default' }
-          ]
-        );
+      } catch (audioError) {
+        console.log('⚠️ Mikrofon izni alınamadı, devam ediliyor:', audioError);
+        setMicrophonePermission(false);
       }
       
       console.log('İzin durumu:', {
         kamera: cameraPermission?.granted,
-        mikrofon: audioStatus.status === 'granted'
+        mikrofon: microphonePermission
       });
       
     } catch (error) {
@@ -103,383 +97,236 @@ const LiveKitPlayer = ({
     }
   };
 
-  const initializeLiveKit = async () => {
+  const fetchToken = async () => {
     try {
-      // Get LiveKit token from backend
-      const response = await livekitAPI.post(`/streams/${streamId}/token`);
-
-      setToken(response.data.token);
-      
-      // Initialize LiveKit room
-      await connectToRoom(response.data.token);
-      
-    } catch (error) {
-      console.error('LiveKit initialization error:', error);
-      setError('LiveKit bağlantısı kurulamadı');
-      onError?.(error);
-    }
-  };
-
-  const connectToRoom = async (accessToken) => {
-    try {
-      console.log('LiveKit token alındı:', accessToken);
-      console.log('LiveKit URL:', LIVEKIT_CONFIG.url);
-      console.log('Room Name:', roomName);
-      
-      // Platform kontrolü
-      const isWeb = Platform.OS === 'web';
-      const isExpoGo = !isWeb && Constants?.appOwnership === 'expo';
-      
-      if (isWeb) {
-        // Web versiyonu - Gerçek LiveKit bağlantısı
-        console.log('🌐 Web versiyonu - Gerçek LiveKit bağlantısı...');
-        
-        // Web için LiveKit import
-        const { Room, RoomEvent, LocalParticipant, RemoteParticipant, registerGlobals } = await import('livekit-client');
-        
-        // WebRTC globals'ı register et
-        try {
-          if (registerGlobals) {
-            registerGlobals();
-            console.log('✅ WebRTC globals register edildi');
-          }
-        } catch (regError) {
-          console.log('⚠️ WebRTC globals register edilemedi:', regError);
-        }
-        
-        
-        // Web'de medya izinleri kontrolü
-        try {
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            console.log('✅ Web: getUserMedia destekleniyor');
-            
-            // HTTPS kontrolü - sadece uyarı ver, durma
-            if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-              console.log('⚠️ Web: HTTPS gerekli, medya izinleri sınırlı olabilir');
-              // Uyarı ver ama devam et
-            }
-            
-          } else {
-            console.log('❌ Web: getUserMedia desteklenmiyor');
-            throw new Error('getUserMedia desteklenmiyor');
-          }
-        } catch (mediaError) {
-          console.error('❌ Web: Medya izinleri hatası:', mediaError);
-          
-          // Medya izinleri olmasa bile room'a bağlan
-          console.log('🔄 Web: Medya izinleri olmadan room\'a bağlanılıyor...');
-          
-          // Room objesini oluştur
-          const room = new Room({
-            adaptiveStream: true,
-            dynacast: true,
-          });
-          
-          room.on(RoomEvent.Connected, () => {
-            console.log('✅ Web: LiveKit room\'a bağlandı (dinleyici)');
-            setIsConnected(true);
-            setLocalParticipant(room.localParticipant);
-            onJoin?.();
-          });
-          
-          room.on(RoomEvent.ParticipantConnected, (participant) => {
-            console.log('👥 Web: Katılımcı bağlandı:', participant.identity);
-            setRemoteParticipants(prev => [...prev, participant]);
-          });
-          
-          room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-            console.log('👥 Web: Katılımcı ayrıldı:', participant.identity);
-            setRemoteParticipants(prev => prev.filter(p => p.identity !== participant.identity));
-          });
-          
-          await room.connect(LIVEKIT_CONFIG.url, accessToken);
-          roomRef.current = room;
-          
-          // Sadece dinleyici olarak katıl
-          console.log('👂 Web: Dinleyici olarak katıldı');
-          return;
-        }
-        
-        const room = new Room({
-          adaptiveStream: true,
-          dynacast: true,
-        });
-        
-        room.on(RoomEvent.Connected, () => {
-          console.log('✅ Web: LiveKit room\'a bağlandı');
-          setIsConnected(true);
-          setLocalParticipant(room.localParticipant);
-          onJoin?.();
-        });
-        
-        room.on(RoomEvent.ParticipantConnected, (participant) => {
-          console.log('👥 Web: Katılımcı bağlandı:', participant.identity);
-          setRemoteParticipants(prev => [...prev, participant]);
-        });
-        
-        room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-          console.log('👥 Web: Katılımcı ayrıldı:', participant.identity);
-          setRemoteParticipants(prev => prev.filter(p => p.identity !== participant.identity));
-        });
-        
-        // Web kamera ve mikrofon izinleri
-        try {
-          console.log('🎥 Web: Kamera ve mikrofon izinleri isteniyor...');
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              facingMode: 'user'
-            },
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
-          });
-          
-          console.log('✅ Web: Medya izinleri alındı');
-          
-          // Room'a bağlan
-          await room.connect(LIVEKIT_CONFIG.url, accessToken);
-          roomRef.current = room;
-          
-          // Track'leri publish et
-          await room.localParticipant.setMicrophoneEnabled(true);
-          await room.localParticipant.setCameraEnabled(true);
-          
-          console.log('📹 Web: Kamera ve mikrofon track\'leri publish edildi');
-          
-        } catch (mediaError) {
-          console.error('❌ Web: Medya izinleri hatası:', mediaError);
-          
-          // Medya izinleri olmasa bile room'a bağlan
-          console.log('🔄 Web: Medya izinleri olmadan room\'a bağlanılıyor...');
-          await room.connect(LIVEKIT_CONFIG.url, accessToken);
-          roomRef.current = room;
-          
-          // Sadece dinleyici olarak katıl
-          console.log('👂 Web: Dinleyici olarak katıldı');
-        }
-        
-      } else if (isExpoGo) {
-        // Expo Go: WebRTC native modüller desteklenmez. Development build gerekli.
-        console.log('⛔ Expo Go tespit edildi: Development build olmadan WebRTC çalışmaz');
-        setError('Expo Go üzerinde WebRTC desteklenmiyor. Lütfen development build kullanın.');
+      // Çift (eşzamanlı) token isteğini engelle
+      if (tokenRef.current || isFetchingTokenRef.current) {
+        console.log('🔄 Token zaten mevcut/isteniyor, tekrar alınmıyor');
+        if (tokenRef.current) setToken(tokenRef.current);
         return;
-      } else {
-        // Development Build - Gerçek LiveKit bağlantısı
-        console.log('📱 Development Build - Gerçek LiveKit bağlantısı...');
-        const { Room, RoomEvent, LocalParticipant, RemoteParticipant } = await import('livekit-client');
-        const room = new Room({
-          adaptiveStream: true,
-          dynacast: true,
-        });
-        
-        room.on(RoomEvent.Connected, () => {
-          console.log('✅ Dev Build: LiveKit room\'a bağlandı');
-          setIsConnected(true);
-          setLocalParticipant(room.localParticipant);
-          onJoin?.();
-        });
-        
-        room.on(RoomEvent.ParticipantConnected, (participant) => {
-          console.log('👥 Dev Build: Katılımcı bağlandı:', participant.identity);
-          setRemoteParticipants(prev => [...prev, participant]);
-        });
-        
-        room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-          console.log('👥 Dev Build: Katılımcı ayrıldı:', participant.identity);
-          setRemoteParticipants(prev => prev.filter(p => p.identity !== participant.identity));
-        });
-        
-        // Room'a bağlan
-        await room.connect(LIVEKIT_CONFIG.url, accessToken);
-        roomRef.current = room;
       }
-      
+      isFetchingTokenRef.current = true;
+
+      const role = shouldPublish ? 'publisher' : 'subscriber';
+      const identityFallback = shouldPublish ? `publisher_${Date.now()}` : `viewer_${Date.now()}`;
+      const identityToUse = participantIdentity || identityFallback;
+
+      const url = `/streams/${streamId}/token?role=${encodeURIComponent(role)}&identity=${encodeURIComponent(identityToUse)}`;
+      console.log('🚀 LiveKit API Request: GET ' + url);
+      const response = await livekitAPI.get(url);
+      console.log('🔑 LiveKit Token eklendi');
+      console.log('✅ LiveKit API Response: 200 ' + url);
+
+      const data = response?.data;
+      const receivedToken = typeof data === 'string' ? data : data?.token;
+      if (!receivedToken) {
+        throw new Error('Token parse edilemedi');
+      }
+      console.log('LiveKit token alındı:', receivedToken);
+
+      // JWT decode and grant check (debug)
+      try {
+        const [, payloadB64] = receivedToken.split('.') || [];
+        if (payloadB64) {
+          const json = JSON.parse(base64Atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+          console.log('TOKEN PAYLOAD =>', json);
+          const canPub = json?.video?.canPublish === true;
+          setCanPublishGrant(canPub);
+          if (shouldPublish && !canPub) {
+            console.warn('⚠️ Bu token yayın yetkisi taşımıyor; audio/video publish kapatılacak.');
+          }
+        } else {
+          setCanPublishGrant(null);
+        }
+      } catch (e) {
+        console.warn('JWT decode başarısız:', e?.message);
+        setCanPublishGrant(null);
+      }
+
+      tokenRef.current = receivedToken;
+      setToken(receivedToken);
     } catch (error) {
-      console.error('Room connection error:', error);
-      setError('Odaya bağlanılamadı: ' + error.message);
+      console.error('LiveKit token alınamadı:', error);
+      setError('Token alınamadı: ' + error.message);
       onError?.(error);
+    } finally {
+      isFetchingTokenRef.current = false;
     }
   };
 
-  const toggleMute = async () => {
-    try {
-      if (isMuted) {
-        // Mikrofonu aç
-        if (!recording && microphonePermission) {
-          const { recording: newRecording } = await Audio.Recording.createAsync(
-            Audio.RecordingOptionsPresets.HIGH_QUALITY
-          );
-          setRecording(newRecording);
+  // LiveKitRoom içeriği
+  const RoomContent = () => {
+    const participants = useParticipants();
+    const { localParticipant } = useLocalParticipant();
+    const enableAttemptedRef = useRef(false);
+
+    const getVideoPublications = (p) => {
+      if (!p) return [];
+      // RN SDK bazı sürümlerde videoTrackPublications yerine trackPublications map'i sağlar
+      const videoPubsFromArray = Array.isArray(p.videoTrackPublications)
+        ? p.videoTrackPublications
+        : [];
+      const mapValues = p.trackPublications && typeof p.trackPublications.values === 'function'
+        ? Array.from(p.trackPublications.values())
+        : [];
+      const combined = [...videoPubsFromArray, ...mapValues];
+      return combined.filter((pub) => pub && (pub.videoTrack || (pub.track && pub.track.kind === 'video')));
+    };
+
+    // Admin publish: mic/cam auto-enable ve publish garantisi
+    useEffect(() => {
+      let cancelled = false;
+      const ensurePublishing = async () => {
+        try {
+          if (!shouldPublish || !localParticipant) return;
+          if (enableAttemptedRef.current) return;
+          enableAttemptedRef.current = true;
+
+          console.log('🎛️ Mic/Camera publish başlatılıyor...');
+          // Mikrofon ve kamera yayınını aç (varsayılan arka kamera)
+          await localParticipant.setMicrophoneEnabled(true);
+          try {
+            // LiveKit VideoCaptureOptions ile facingMode: 'environment' (arka)
+            await localParticipant.setCameraEnabled(true, { facingMode: 'environment' });
+          } catch (optErr) {
+            console.log('⚠️ facingMode desteklenmiyor olabilir, cameraFacing=back ile deniyorum...', optErr?.message || optErr);
+            try {
+              await localParticipant.setCameraEnabled(true, { cameraFacing: 'back' });
+            } catch (optErr2) {
+              console.log('⚠️ cameraFacing da desteklenmedi, generic enable fallback', optErr2?.message || optErr2);
+              await localParticipant.setCameraEnabled(false);
+              await localParticipant.setCameraEnabled(true);
+            }
+          }
+          if (cancelled) return;
+          console.log('✅ Mic/Camera enabled & publish denendi');
+
+          // 2 saniye sonra track yoksa bir kez daha tetikle
+          setTimeout(async () => {
+            try {
+              if (cancelled) return;
+              const pubs = getVideoPublications(localParticipant);
+              const hasVideo = pubs && pubs.length > 0;
+              if (!hasVideo) {
+                console.log('♻️ Video track görünmüyor, yeniden deniyorum...');
+                await localParticipant.setCameraEnabled(false);
+                try {
+                  await localParticipant.setCameraEnabled(true, { facingMode: 'environment' });
+                } catch (optErr2) {
+                  try {
+                    await localParticipant.setCameraEnabled(true, { cameraFacing: 'back' });
+                  } catch (optErr3) {
+                    await localParticipant.setCameraEnabled(true);
+                  }
+                }
+                console.log('✅ Kamera yeniden etkinleştirildi');
+              }
+            } catch (retryErr) {
+              console.warn('⚠️ Publish retry hatası:', retryErr?.message || retryErr);
+            }
+          }, 2000);
+        } catch (e) {
+          console.warn('⚠️ Mic/Camera enable hatası:', e?.message || e);
+          enableAttemptedRef.current = false; // Sonraki renderda tekrar denesin
         }
-        setIsMuted(false);
-        console.log('Mikrofon açıldı');
-      } else {
-        // Mikrofonu kapat
-        if (recording) {
-          await recording.stopAndUnloadAsync();
-          setRecording(null);
-        }
-        setIsMuted(true);
-        console.log('Mikrofon kapatıldı');
-      }
-    } catch (error) {
-      console.error('Mute toggle error:', error);
-      Alert.alert('Hata', 'Ses kontrolü yapılamadı: ' + error.message);
-    }
-  };
+      };
+      ensurePublishing();
+      return () => { cancelled = true; };
+    }, [localParticipant, shouldPublish]);
 
-  const toggleCamera = async () => {
-    try {
-      if (isCameraOn) {
-        // Kamerayı kapat
-        setIsCameraOn(false);
-        console.log('Kamera kapatıldı');
-      } else {
-        // Kamerayı aç
-        setIsCameraOn(true);
-        console.log('Kamera açıldı');
-      }
-    } catch (error) {
-      console.error('Camera toggle error:', error);
-      Alert.alert('Hata', 'Kamera kontrolü yapılamadı: ' + error.message);
-    }
-  };
-
-  const leaveRoom = async () => {
-    try {
-      console.log('Leaving room...');
-      setIsConnected(false);
-      setLocalParticipant(null);
-      setRemoteParticipants([]);
-      onLeave?.();
-    } catch (error) {
-      console.error('Leave room error:', error);
-    }
-  };
-
-  if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={styles.container}>
+        {/* Remote participants */}
+        {participants.flatMap((participant) => {
+          const pubs = getVideoPublications(participant);
+          return pubs.map((pub) => {
+            const videoTrack = pub.videoTrack || (pub.track && pub.track.kind === 'video' ? pub.track : undefined);
+            if (!videoTrack) return null;
+            return (
+              <View key={`${participant.identity}-${pub.trackSid || pub.sid || Math.random()}`} style={styles.participantContainer}>
+                <VideoView style={styles.videoView} videoTrack={videoTrack} />
+                <Text style={styles.participantName}>{participant.identity}</Text>
+              </View>
+            );
+          });
+        })}
         
-        {/* Web için özel bilgilendirme */}
-        {Platform.OS === 'web' && error.includes('HTTPS') && (
-          <View style={styles.webInfoContainer}>
-            <Text style={styles.webInfoTitle}>🌐 Web Tarayıcısı Bilgisi</Text>
-            <Text style={styles.webInfoText}>
-              • Medya izinleri için HTTPS gerekli{'\n'}
-              • localhost'ta HTTP çalışır{'\n'}
-              • Simülasyon modu aktif
-            </Text>
+        {/* Local participant (only show in publish mode) */}
+        {shouldPublish && (() => {
+          const pubs = getVideoPublications(localParticipant);
+          const first = pubs[0];
+          const videoTrack = first && (first.videoTrack || (first.track && first.track.kind === 'video' ? first.track : undefined));
+          if (!videoTrack) return null;
+          return (
+            <View style={styles.localParticipantContainer}>
+              <VideoView style={styles.localVideoView} videoTrack={videoTrack} />
+              <Text style={styles.localParticipantName}>Sen</Text>
+            </View>
+          );
+        })()}
+        
+        {/* Controls */}
+        <View style={styles.controls}>
+          <TouchableOpacity style={styles.controlButton} onPress={onLeave}>
+            <Text style={styles.controlButtonText}>Çıkış</Text>
+          </TouchableOpacity>
+        </View>
+        {shouldPublish && canPublishGrant === false && (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>Bu token yayın yetkisi taşımıyor (viewer). Yayın kapatıldı.</Text>
           </View>
         )}
-        
-        <TouchableOpacity style={styles.retryButton} onPress={initializeLiveKit}>
+      </View>
+    );
+  };
+
+  // Ana render
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchToken}>
           <Text style={styles.retryButtonText}>Tekrar Dene</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  if (!token) {
   return (
     <View style={styles.container}>
-      {/* Video Container */}
-      <View style={styles.videoContainer}>
-        <Text style={styles.roomInfo}>
-          Oda: {roomName} | Katılımcı: {participantName}
-        </Text>
-        
-        {/* Kamera Preview */}
-        {cameraPermission?.granted && isCameraOn ? (
-          <CameraView
-            style={styles.cameraPreview}
-            facing="back"
-            ref={setCameraRef}
-          />
-        ) : (
-          <View style={styles.noCameraView}>
-            <Text style={styles.noCameraText}>
-              {!cameraPermission?.granted ? '📷 Kamera İzni Gerekli' : '📷 Kamera Kapalı'}
-            </Text>
-          </View>
-        )}
-        
-        {isConnected ? (
-          <View style={styles.connectedView}>
-            <Text style={styles.connectedText}>✅ LiveKit'e Bağlandı</Text>
-            <Text style={styles.participantCount}>
-              Katılımcı Sayısı: {remoteParticipants.length + (localParticipant ? 1 : 0)}
-            </Text>
-            {localParticipant && (
-              <Text style={styles.localParticipantText}>
-                👤 Sen: {localParticipant.name || localParticipant.identity}
-              </Text>
-            )}
-            {/* İzin Durumu */}
-        <View style={styles.permissionStatus}>
-          <Text style={styles.permissionText}>
-            📹 Kamera: {cameraPermission?.granted ? '✅' : '❌'}
-          </Text>
-          <Text style={styles.permissionText}>
-            🎤 Mikrofon: {microphonePermission ? '✅' : '❌'}
-          </Text>
-        </View>
-          </View>
-        ) : (
-          <View style={styles.connectingView}>
-            <Text style={styles.connectingText}>🔄 Bağlanıyor...</Text>
-          </View>
-        )}
+        <Text style={styles.loadingText}>Token alınıyor...</Text>
       </View>
+    );
+  }
 
-      {/* Controls */}
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity
-          style={[styles.controlButton, isMuted && styles.controlButtonActive]}
-          onPress={toggleMute}
-        >
-          <Text style={styles.controlButtonText}>
-            {isMuted ? '🔇' : '🎤'}
-          </Text>
-        </TouchableOpacity>
+  const enablePublish = shouldPublish && canPublishGrant === true; // sadece açıkça izin varsa yayınla
 
-        <TouchableOpacity
-          style={[styles.controlButton, !isCameraOn && styles.controlButtonActive]}
-          onPress={toggleCamera}
-        >
-          <Text style={styles.controlButtonText}>
-            {isCameraOn ? '📹' : '📷'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.controlButton, styles.leaveButton]}
-          onPress={leaveRoom}
-        >
-          <Text style={styles.controlButtonText}>📞</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Participants List */}
-      <View style={styles.participantsContainer}>
-        <Text style={styles.participantsTitle}>Katılımcılar:</Text>
-        {localParticipant && (
-          <Text style={styles.participantText}>
-            👤 {localParticipant.name || localParticipant.identity} (Sen)
-          </Text>
-        )}
-        {remoteParticipants.map((participant, index) => (
-          <Text key={participant.identity || index} style={styles.participantText}>
-            👥 {participant.name || participant.identity}
-          </Text>
-        ))}
-      </View>
-    </View>
+  return (
+    <LiveKitRoom
+      serverUrl={LIVEKIT_CONFIG.url}
+      token={token}
+      connect={true}
+      audio={enablePublish}
+      video={enablePublish}
+      onConnected={() => {
+        console.log('✅ LiveKit room\'a bağlandı');
+        onJoin?.();
+      }}
+      onDisconnected={() => {
+        console.log('❌ LiveKit room\'dan ayrıldı');
+        onLeave?.();
+      }}
+      onError={(error) => {
+        console.error('LiveKit error:', error);
+        setError('LiveKit hatası: ' + error.message);
+        onError?.(error);
+      }}
+    >
+      <RoomContent />
+    </LiveKitRoom>
   );
+
 };
 
 const styles = StyleSheet.create({
@@ -487,158 +334,130 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  videoContainer: {
+  participantContainer: {
+    flex: 1,
+    margin: 5,
+  },
+  videoView: {
+    flex: 1,
+    backgroundColor: '#333',
+  },
+  participantName: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    color: 'white',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 5,
+    borderRadius: 5,
+  },
+  localParticipantContainer: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 120,
+    height: 160,
+    backgroundColor: '#333',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  localVideoView: {
+    flex: 1,
+  },
+  localParticipantName: {
+    position: 'absolute',
+    bottom: 5,
+    left: 5,
+    color: 'white',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 2,
+    borderRadius: 3,
+    fontSize: 12,
+  },
+  controls: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+  },
+  banner: {
+    position: 'absolute',
+    bottom: 80,
+    left: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 193, 7, 0.9)',
+    padding: 10,
+    borderRadius: 8,
+  },
+  bannerText: {
+    color: '#111827',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  controlButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 15,
+    borderRadius: 25,
+  },
+  controlButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    margin: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    margin: 20,
+  },
+  retryButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  loadingText: {
+    color: 'white',
+    textAlign: 'center',
+    margin: 20,
+  },
+  expoGoContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    padding: 20,
   },
-  roomInfo: {
-    color: '#fff',
-    fontSize: 16,
+  expoGoTitle: {
+    color: '#fbbf24',
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-  },
-  connectedView: {
-    alignItems: 'center',
-  },
-  connectedText: {
-    color: '#4ade80',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  participantCount: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  localParticipantText: {
-    color: '#4ade80',
-    fontSize: 12,
-    marginTop: 5,
-  },
-  cameraPreview: {
-    width: '100%',
-    height: 200,
-    marginBottom: 10,
-  },
-  noCameraView: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  noCameraText: {
-    color: '#fff',
-    fontSize: 16,
     textAlign: 'center',
   },
-  permissionStatus: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 8,
-  },
-  permissionText: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  connectingView: {
-    alignItems: 'center',
-  },
-  connectingText: {
-    color: '#fbbf24',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  controlsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#2a2a2a',
-  },
-  controlButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#4a4a4a',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 10,
-  },
-  controlButtonActive: {
-    backgroundColor: '#ef4444',
-  },
-  leaveButton: {
-    backgroundColor: '#ef4444',
-  },
-  controlButtonText: {
-    fontSize: 24,
-  },
-  participantsContainer: {
-    backgroundColor: '#2a2a2a',
-    padding: 15,
-    maxHeight: 150,
-  },
-  participantsTitle: {
-    color: '#fff',
+  expoGoText: {
+    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  participantText: {
-    color: '#fff',
-    fontSize: 14,
-    marginBottom: 5,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 30,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
     padding: 20,
   },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 16,
+  errorSubText: {
+    color: '#999',
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  webInfoContainer: {
-    backgroundColor: '#1e3a8a',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    maxWidth: 400,
-  },
-  webInfoTitle: {
-    color: '#60a5fa',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  webInfoText: {
-    color: '#93c5fd',
+    margin: 10,
     fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'left',
-  },
-  retryButton: {
-    backgroundColor: '#4ade80',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 

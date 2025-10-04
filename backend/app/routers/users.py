@@ -91,7 +91,7 @@ def get_current_user(authorization: str = Header(None)):
     token = authorization.split(" ")[1]
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("sub")
+        user_id = payload.get("user_id") or payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Geçersiz token")
         return user_id
@@ -324,3 +324,85 @@ async def get_user_streams(
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Yayınlar getirilemedi: {str(e)}")
+
+
+# --- NEW: Broadcast History & Media Package Detail for User ---
+@router.get("/user/broadcast-history")
+async def broadcast_history(cursor: int = 0, limit: int = 20, current_user_id: str = Depends(get_current_user)):
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text("""
+                SELECT dbp.broadcast_id as "broadcastId",
+                       dbp.donation_id as "donationId",
+                       s.title as title,
+                       s.started_at as "startedAt",
+                       EXTRACT(EPOCH FROM (COALESCE(s.ended_at, NOW()) - COALESCE(s.started_at, NOW())))::INT as "durationSec",
+                       CASE WHEN EXISTS (
+                           SELECT 1 FROM media_packages mp
+                           WHERE mp.donation_id = dbp.donation_id AND mp.status = 'published'
+                       ) THEN TRUE ELSE FALSE END as "hasMediaPackage",
+                       (
+                           SELECT mp.id FROM media_packages mp
+                           WHERE mp.donation_id = dbp.donation_id AND mp.status = 'published'
+                           ORDER BY mp.published_at DESC LIMIT 1
+                       ) as "mediaPackageId"
+                FROM donation_broadcast_participation dbp
+                JOIN streams s ON s.id = dbp.broadcast_id
+                JOIN donations d ON d.id = dbp.donation_id
+                WHERE d.user_id = :user_id
+                ORDER BY dbp.joined_at DESC
+                OFFSET :offset LIMIT :limit
+            """), {"user_id": current_user_id, "offset": cursor, "limit": limit}).mappings().all()
+            return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Yayın geçmişi getirilemedi: {str(e)}")
+
+
+@router.get("/user/media-packages/{package_id}")
+async def media_package_detail(package_id: str, current_user_id: str = Depends(get_current_user)):
+    try:
+        with engine.connect() as conn:
+            pkg = conn.execute(text("""
+                SELECT mp.id, mp.title, mp.note, mp.published_at, mp.donation_id
+                FROM media_packages mp
+                JOIN donations d ON d.id = mp.donation_id
+                WHERE mp.id = :id AND mp.status = 'published' AND d.user_id = :user_id
+            """), {"id": package_id, "user_id": current_user_id}).mappings().first()
+            if not pkg:
+                raise HTTPException(status_code=404, detail="Not found")
+
+            items = conn.execute(text("""
+                SELECT mpi.media_asset_id, ma.mime_type, ma.width, ma.height, ma.duration_seconds, ma.storage_key
+                FROM media_package_items mpi
+                JOIN media_assets ma ON ma.id = mpi.media_asset_id
+                WHERE mpi.package_id = :pid
+                ORDER BY mpi.position ASC
+            """), {"pid": package_id}).mappings().all()
+
+        from ..services.storage_service import storage_service
+        result_items = []
+        for it in items:
+            preview = storage_service.presign_get(it["storage_key"], it["mime_type"])  # thumbnail ileride
+            download = preview
+            result_items.append({
+                "id": it["media_asset_id"],
+                "type": "video" if it["mime_type"].startswith("video/") else "image",
+                "mime": it["mime_type"],
+                "width": it["width"],
+                "height": it["height"],
+                "durationSec": it["duration_seconds"],
+                "previewUrl": preview,
+                "downloadUrl": download,
+            })
+
+        return {
+            "packageId": pkg["id"],
+            "title": pkg["title"],
+            "note": pkg["note"],
+            "publishedAt": pkg["published_at"].isoformat() if pkg["published_at"] else None,
+            "items": result_items,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Medya paketi getirilemedi: {str(e)}")

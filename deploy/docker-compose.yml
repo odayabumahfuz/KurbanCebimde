@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  api:
+    image: ghcr.io/yourorg/kc-backend:latest
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      bash -lc "alembic upgrade head &&
+                uvicorn app.main:app --host 0.0.0.0 --port 8000 \
+                --workers ${UVICORN_WORKERS:-4} --proxy-headers --forwarded-allow-ips='*'"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  worker:
+    image: ghcr.io/yourorg/kc-backend:latest
+    env_file: .env
+    command: celery -A app.worker worker --loglevel=INFO --concurrency=${CELERY_CONCURRENCY:-2}
+    depends_on:
+      - redis
+      - db
+    restart: always
+
+  scheduler:
+    image: ghcr.io/yourorg/kc-backend:latest
+    env_file: .env
+    command: celery -A app.worker beat --loglevel=INFO
+    depends_on:
+      - redis
+      - db
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+    restart: always
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: always
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
+
+

@@ -2,6 +2,7 @@
 # Bu dosya tüm proje için kolay komutlar sağlar
 
 .PHONY: help install start stop build test lint clean docker-up docker-down
+.PHONY: test-up test-seed test-backend test-admin e2e test-down
 
 # Varsayılan hedef
 help: ## Yardım mesajını göster
@@ -259,3 +260,25 @@ quick: ## Hızlı başlangıç
 	@echo "  Backend: http://localhost:8000"
 	@echo "  Admin Panel: http://localhost:3000"
 	@echo "  React Native: http://localhost:8081"
+
+test-up:
+	docker compose -f docker-compose.test.yml up -d
+	@sleep 4
+	@echo "Waiting services..."
+	docker compose -f docker-compose.test.yml ps
+
+test-seed:
+	cd backend && ENV=test python -m scripts.seed_test_data || true
+
+test-backend:
+	cd backend && pip install -U pip && pip install -r requirements-test.txt && \
+	pytest -q --maxfail=1 --disable-warnings
+
+test-admin:
+	cd kurban-cebimde/admin-panel && corepack enable && pnpm i && pnpm build && pnpm exec playwright install --with-deps && \
+	pnpm exec playwright test --reporter=list
+
+e2e: test-up test-seed test-backend test-admin
+
+test-down:
+	docker compose -f docker-compose.test.yml down -v

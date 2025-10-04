@@ -46,7 +46,8 @@ export default function StartLiveScreen({ route, navigation }) {
           roomName, 
           participantName, 
           participantIdentity,
-          streamId 
+          streamId,
+          mode: 'publisher'
         });
       } else {
         // Agora ile yayın başlat (eski sistem)

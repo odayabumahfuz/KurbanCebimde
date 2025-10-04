@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Search, Filter, Download, Eye, CheckCircle, Clock, AlertCircle, TrendingUp, DollarSign, Users, Activity, Gift } from 'lucide-react'
+import { Search, Filter, Download, Eye, CheckCircle, Clock, AlertCircle, TrendingUp, DollarSign, Users, Activity, Gift, Link2, Package, RotateCcw } from 'lucide-react'
 import { adminApi } from '../lib/adminApi'
 import Layout, { useTheme } from '../components/Layout'
+import { DataTable, type Column } from '../components/shared/DataTable'
 
 export default function DonationsPage() {
   const { theme } = useTheme()
@@ -12,6 +13,10 @@ export default function DonationsPage() {
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(20)
   const [total, setTotal] = useState(0)
+  const [drawerId, setDrawerId] = useState<string | null>(null)
+  const [drawerData, setDrawerData] = useState<any | null>(null)
+  const [refundOpen, setRefundOpen] = useState<{id:string|null, note:string}>({id:null, note:''})
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     fetchDonations()
@@ -32,6 +37,22 @@ export default function DonationsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function openDrawer(id: string){
+    setDrawerId(id)
+    try{ const data = await adminApi.getDonation(id); setDrawerData(data) }catch(e){ setDrawerData(null) }
+  }
+  function closeDrawer(){ setDrawerId(null); setDrawerData(null) }
+
+  async function doRefund(){
+    if(!refundOpen.id) return
+    try{ setActionLoading(true); await adminApi.refundDonation(refundOpen.id, refundOpen.note); alert('İade talebi alındı'); setRefundOpen({id:null, note:''}); fetchDonations(); }catch(e:any){ alert(e?.message||'İade başarısız') } finally{ setActionLoading(false) }
+  }
+
+  async function createPackageShortcut(id: string){
+    // basit yönlendirme: medya paketleri sayfasına
+    window.location.href = '/admin/media/package'
   }
 
   const getStatusIcon = (status: string) => {
@@ -116,9 +137,9 @@ export default function DonationsPage() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="page-container space-y-6">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+        <div className="card">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
               <Gift className="w-6 h-6 text-white" />
@@ -213,112 +234,96 @@ export default function DonationsPage() {
           </div>
         </div>
 
-        {/* Donations Table */}
-        <div className="card overflow-hidden">
-          <div className="card-header">
-            <h3 className="text-lg font-medium text-zinc-100">Bağış Listesi</h3>
-            <p className="text-sm text-zinc-400">Toplam {total} bağış</p>
+        {/* Donations Table - DataTable */}
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-zinc-400">Yükleniyor...</p>
           </div>
-          
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-2 text-zinc-400">Yükleniyor...</p>
-            </div>
-          ) : donations.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-zinc-400">Bağış bulunamadı</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-700">
-                <thead className="bg-zinc-800">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
-                      Kullanıcı
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
-                      Tutar
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
-                      Durum
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
-                      Tarih
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-zinc-300 uppercase tracking-wider">
-                      İşlemler
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-zinc-900 divide-y divide-zinc-700">
-                  {donations.map((donation) => (
-                    <tr key={donation.id} className="hover:bg-zinc-800">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-zinc-100">
-                            {donation.name} {donation.surname}
-                          </div>
-                          <div className="text-sm text-zinc-400">
-                            {donation.phone}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-zinc-100">
-                          {formatAmount(donation.amount)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(donation.status)}`}>
-                          {getStatusIcon(donation.status)}
-                          <span className="ml-1">{getStatusText(donation.status)}</span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(donation.created_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {donation.video_url && (
-                            <button className="text-green-600 hover:text-green-900">
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        ) : (
+          <DataTable
+            rows={donations.map((d:any)=> ({
+              id: String(d.id),
+              ad: `${d.name||''} ${d.surname||''}`.trim(),
+              tel: d.phone || '-',
+              tutar: formatAmount(d.amount),
+              hayvan: d.animal_type || '-',
+              adet: d.animal_count != null ? String(d.animal_count) : '-',
+              niyet: d.slaughter_intent || '-',
+              durum: getStatusText(d.status),
+              tarih: formatDate(d.created_at),
+              _raw: d,
+            }))}
+            columns={[
+              { id:'ad', header:'Bağışçı', accessor:(r:any)=> r.ad },
+              { id:'tel', header:'Telefon', accessor:(r:any)=> r.tel },
+              { id:'tutar', header:'Tutar', accessor:(r:any)=> r.tutar },
+              { id:'hayvan', header:'Hayvan Türü', accessor:(r:any)=> r.hayvan },
+              { id:'adet', header:'Adet', accessor:(r:any)=> r.adet },
+              { id:'niyet', header:'Kesim Niyeti', accessor:(r:any)=> r.niyet },
+              { id:'durum', header:'Durum', accessor:(r:any)=> r.durum },
+              { id:'tarih', header:'Tarih', accessor:(r:any)=> r.tarih },
+              { id:'ops', header:'İşlemler', accessor:(r:any)=> (
+                <div className="flex items-center gap-2">
+                  <button title="Detay" onClick={()=>openDrawer(r.id)} className="text-blue-500"><Eye className="w-4 h-4"/></button>
+                  <button title="Yayına bağla" onClick={()=>alert('Yayına bağlama akışı yakında')} className="text-amber-500"><Link2 className="w-4 h-4"/></button>
+                  <button title="İade" onClick={()=>setRefundOpen({id:r.id, note:''})} className="text-red-500"><RotateCcw className="w-4 h-4"/></button>
+                  <button title="Paket oluştur" onClick={()=>createPackageShortcut(r.id)} className="text-green-500"><Package className="w-4 h-4"/></button>
+                </div>
+              ) },
+            ] as Column<any>[]}
+            csvName="bagislar"
+          />
+        )}
 
         {/* Pagination */}
-        {total > size && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Sayfa {page} / {Math.ceil(total / size)}
+        <div className="mt-6 flex items-center justify-between">
+          <div className="text-sm text-gray-700">Sayfa {page} / {Math.max(1, Math.ceil(total / size))}</div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Önceki</button>
+            <select value={size} onChange={(e)=>{ setPage(1); setSize(parseInt(e.target.value)) }} className="px-2 py-2 text-sm bg-white border border-gray-300 rounded-md">
+              {[10,20,50,100].map(s=> <option key={s} value={s}>{s}/sayfa</option>)}
+            </select>
+            <button onClick={() => setPage(Math.min(Math.ceil(total / size), page + 1))} disabled={page >= Math.ceil(total / size)} className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Sonraki</button>
+          </div>
+        </div>
+
+        {/* Drawer */}
+        {drawerId && (
+          <div className="fixed inset-0 bg-black/60 z-50" onClick={closeDrawer}>
+            <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 p-4 overflow-auto" onClick={(e)=>e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Bağış Detayı</h2>
+                <button className="px-2 py-1 rounded bg-slate-200 dark:bg-slate-800" onClick={closeDrawer}>Kapat</button>
+              </div>
+              {drawerData ? (
+                <div className="space-y-3 text-sm">
+                  <div><span className="text-slate-500">ID:</span> {drawerData.id}</div>
+                  <div><span className="text-slate-500">Kullanıcı:</span> {drawerData.name} {drawerData.surname}</div>
+                  <div><span className="text-slate-500">Tutar:</span> {formatAmount(drawerData.amount)}</div>
+                  <div><span className="text-slate-500">Durum:</span> {getStatusText(drawerData.status)}</div>
+                  <div><span className="text-slate-500">Oluşturma:</span> {formatDate(drawerData.created_at)}</div>
+                  <div><span className="text-slate-500">Yayın:</span> {drawerData.broadcast_id || '-'}</div>
+                  <div><span className="text-slate-500">Medya Paketleri:</span> {(drawerData.packages||[]).length}</div>
+                </div>
+              ) : (
+                <div className="text-slate-500">Yükleniyor...</div>
+              )}
             </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Önceki
-              </button>
-              <button
-                onClick={() => setPage(Math.min(Math.ceil(total / size), page + 1))}
-                disabled={page >= Math.ceil(total / size)}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Sonraki
-              </button>
+          </div>
+        )}
+
+        {/* Refund Modal */}
+        {refundOpen.id && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={()=>setRefundOpen({id:null, note:''})}>
+            <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-full max-w-md border border-slate-200 dark:border-slate-700" onClick={(e)=>e.stopPropagation()}>
+              <h3 className="text-lg font-semibold mb-3">İade Et</h3>
+              <p className="text-sm text-slate-500 mb-2">Bu bağış için iade başlatılacak. Not (opsiyonel):</p>
+              <textarea value={refundOpen.note} onChange={(e)=>setRefundOpen(prev=>({ ...prev, note: e.target.value }))} className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 h-24 bg-transparent" />
+              <div className="flex justify-end gap-2 mt-4">
+                <button onClick={()=>setRefundOpen({id:null, note:''})} className="px-3 py-2 rounded bg-slate-200 dark:bg-slate-800">İptal</button>
+                <button disabled={actionLoading} onClick={doRefund} className="px-3 py-2 rounded bg-red-600 text-white disabled:opacity-50">İadeyi Başlat</button>
+              </div>
             </div>
           </div>
         )}

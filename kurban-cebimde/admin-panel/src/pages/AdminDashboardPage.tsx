@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useDashboardMetrics, useDonationsTrend, useAuditLatest, useAvgViewers } from '../api/hooks/dashboard'
 // Origin bazlı çalış: prod'da HTTPS altında mixed-content hatasını önle
 const API_BASE = (typeof window !== 'undefined' ? window.location.origin : undefined) 
   || import.meta.env.VITE_API_BASE_URL 
@@ -1325,15 +1326,14 @@ const Analytics: React.FC<{ donations: Donation[]; users: User[] }> = ({ donatio
 };
 
 // ---------- Helpers ----------
-function exportUsersCSV(users: User[]) {
-  const headers = ["ad", "soyad", "telefon", "eposta", "kullanici_id", "durum", "olusturma"];
+import * as XLSX from 'xlsx'
+function exportUsersXLSX(users: User[]) {
+  const headers = ["Ad", "Soyad", "Telefon", "E-posta", "Kullanıcı ID", "Durum", "Oluşturma"];
   const rows = users.map(u => [u.name, u.surname, u.phone, u.email, u.id, u.isActive ? "aktif" : "pasif", u.createdAt]);
-  const csv = [headers.join(","), ...rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'\"')}"`).join(","))].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `kullanicilar-${Date.now()}.csv`; a.click();
-  URL.revokeObjectURL(url);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Kullanicilar')
+  XLSX.writeFile(wb, `kullanicilar-${Date.now()}.xlsx`)
 }
 
 
@@ -1386,6 +1386,12 @@ export default function AdminDashboard() {
     checkWebSocket();
     // Interval kaldırıldı - performans için
   }, []);
+
+  // React Query: dashboard verileri
+  const { data: metrics } = useDashboardMetrics()
+  const { data: trend7d } = useDonationsTrend('7d')
+  const { data: latestAudit } = useAuditLatest()
+  const { data: avgViewers } = useAvgViewers()
 
   // API'den veri çek - sadece dashboard sayfasında
   useEffect(() => {
@@ -1595,7 +1601,7 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="page-container space-y-6">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -1768,7 +1774,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-zinc-500 mb-2">Toplam Kullanıcı</p>
-                            <p className="text-3xl font-bold">{users.length}</p>
+                            <p className="text-3xl font-bold">{metrics?.total_users ?? users.length}</p>
                             <p className="text-xs text-zinc-400 mt-1">Kayıtlı kullanıcı sayısı</p>
                           </div>
                           <div className="bg-blue-100 dark:bg-blue-900/40 rounded-xl p-3">
@@ -1796,7 +1802,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="mt-4 flex items-center gap-1 text-xs text-green-600">
                           <TrendingUp className="h-3 w-3" />
-                          <span>+8% geçen aya göre</span>
+                          <span>₺{(metrics?.donations_sum_7d ?? 0).toLocaleString('tr-TR')}</span>
                         </div>
                       </CardContent>
                     </Card>
@@ -1827,7 +1833,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm text-zinc-500 mb-2">Aktif Yayınlar</p>
-                            <p className="text-3xl font-bold">{broadcasts.filter(b => b.status === 'aktif').length}</p>
+                            <p className="text-3xl font-bold">{metrics?.active_broadcasts ?? broadcasts.filter(b => b.status === 'aktif').length}</p>
                             <p className="text-xs text-zinc-400 mt-1">Şu anda yayında</p>
                           </div>
                           <div className="bg-orange-100 dark:bg-orange-900/40 rounded-xl p-3">
@@ -2013,9 +2019,9 @@ export default function AdminDashboard() {
                     <Users className="mr-2 h-4 w-4" />
                     Yeni Kullanıcı
                   </Button>
-                  <Button variant="outline" onClick={()=>exportUsersCSV(users)}>
+                  <Button variant="outline" onClick={()=>exportUsersXLSX(users)}>
                     <Download className="mr-2 h-4 w-4" />
-                    CSV İndir
+                    Excel İndir
                   </Button>
                 </div>
               </div>
@@ -2071,7 +2077,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Users Table */}
-              <UsersTable data={users} onToggle={toggleUser} onExport={()=>exportUsersCSV(users)} search={search} onSearchChange={setSearch} />
+              <UsersTable data={users} onToggle={toggleUser} onExport={()=>exportUsersXLSX(users)} search={search} onSearchChange={setSearch} />
             </div>
           )}
 

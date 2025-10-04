@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Plus, Download, Edit, Trash2, Search, Calendar, FileText, TrendingUp, Users, DollarSign } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import Layout from '../components/Layout'
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar, Legend } from 'recharts'
 
 export default function ReportsPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -9,6 +11,8 @@ export default function ReportsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [reports, setReports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
 
   useEffect(() => {
     fetchReports()
@@ -143,6 +147,8 @@ export default function ReportsPage() {
     if (selectedType !== 'all' && report.type !== selectedType) return false
     if (selectedRegion !== 'all' && report.region !== selectedRegion) return false
     if (searchTerm && !report.title.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    if (from && report.date < from) return false
+    if (to && report.date > to) return false
     return true
   })
 
@@ -167,17 +173,26 @@ export default function ReportsPage() {
     // Download report logic
   }
 
+  function exportXLSX(){
+    const headers = ['Başlık','Tür','Bölge','Tarih','Durum','İndirme','Yazar']
+    const rows = filteredReports.map(r => [r.title, r.type, r.region, r.date, r.status, r.downloads, r.author])
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Raporlar')
+    XLSX.writeFile(wb, `raporlar-${Date.now()}.xlsx`)
+  }
+
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="page-container space-y-6">
         {/* Header */}
-        <div className="bg-zinc-900 rounded-lg p-6">
+        <div className="card">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-white mb-1">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                 Raporlar
               </h1>
-              <p className="text-zinc-400">
+              <p className="text-slate-500 dark:text-slate-400">
                 Tüm raporları görüntüleyin, yönetin ve analiz edin
               </p>
             </div>
@@ -194,32 +209,41 @@ export default function ReportsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-green-600 mb-2">
-              {reportsData.filter(r => r.type === 'distribution').length}
+          <div className="stat-card stat-green">
+            <div>
+              <div className="stat-title">Dağıtım Raporları</div>
+              <div className="stat-value">{reportsData.filter(r => r.type === 'distribution').length}</div>
             </div>
-            <div className="text-sm text-zinc-600">Dağıtım Raporları</div>
+            <div className="stat-icon">
+              <Users className="w-6 h-6" />
+            </div>
           </div>
-          
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-red-500 mb-2">
-              {reportsData.filter(r => r.type === 'slaughter').length}
+          <div className="stat-card" style={{ color: '#ef4444' }}>
+            <div>
+              <div className="stat-title">Kesim Raporları</div>
+              <div className="stat-value">{reportsData.filter(r => r.type === 'slaughter').length}</div>
             </div>
-            <div className="text-sm text-zinc-600">Kesim Raporları</div>
+            <div className="stat-icon" style={{ background: '#fee2e2' }}>
+              <FileText className="w-6 h-6" />
+            </div>
           </div>
-          
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-amber-500 mb-2">
-              {reportsData.filter(r => r.type === 'financial').length}
+          <div className="stat-card stat-amber">
+            <div>
+              <div className="stat-title">Finansal Raporlar</div>
+              <div className="stat-value">{reportsData.filter(r => r.type === 'financial').length}</div>
             </div>
-            <div className="text-sm text-zinc-600">Finansal Raporlar</div>
+            <div className="stat-icon">
+              <DollarSign className="w-6 h-6" />
+            </div>
           </div>
-          
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-purple-500 mb-2">
-              {reportsData.filter(r => r.type === 'audit').length}
+          <div className="stat-card" style={{ color: '#8b5cf6' }}>
+            <div>
+              <div className="stat-title">Denetim Raporları</div>
+              <div className="stat-value">{reportsData.filter(r => r.type === 'audit').length}</div>
             </div>
-            <div className="text-sm text-zinc-600">Denetim Raporları</div>
+            <div className="stat-icon" style={{ background: '#f3e8ff' }}>
+              <TrendingUp className="w-6 h-6" />
+            </div>
           </div>
         </div>
 
@@ -264,6 +288,53 @@ export default function ReportsPage() {
               <option value="Bangladeş">Bangladeş</option>
               <option value="Genel">Genel</option>
             </select>
+
+            <input type="date" value={from} onChange={(e)=>setFrom(e.target.value)} className="input-field min-w-[160px]" />
+            <input type="date" value={to} onChange={(e)=>setTo(e.target.value)} className="input-field min-w-[160px]" />
+            <button onClick={exportXLSX} className="btn-primary flex items-center gap-2"><Download size={16}/>Excel</button>
+          </div>
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="card xl:col-span-2">
+            <div className="card-header flex items-center justify-between">
+              <div className="text-lg font-semibold">Bağış Trend (örnek)</div>
+            </div>
+            <div className="p-4 h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={[{date:'2024-09-01', amount: 1200},{date:'2024-09-02', amount: 900},{date:'2024-09-03', amount: 1450}]}> 
+                  <defs>
+                    <linearGradient id="repColor" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area dataKey="amount" type="monotone" stroke="#3b82f6" fill="url(#repColor)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-header">
+              <div className="text-lg font-semibold">Tür Dağılımı (örnek)</div>
+            </div>
+            <div className="p-4 h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[{type:'Dağıtım', count:12},{type:'Kesim', count:9},{type:'Finans', count:5}]}> 
+                  <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                  <XAxis dataKey="type" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" fill="#22c55e" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 

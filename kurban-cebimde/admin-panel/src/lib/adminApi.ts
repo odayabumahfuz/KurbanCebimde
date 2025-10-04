@@ -1,12 +1,35 @@
 // Admin API client
 // API Base URL: .env üzerinden gelmezse domain'e göre fallback
-const ENV_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || undefined;
+const RAW_ENV_BASE = (import.meta as any).env?.VITE_API_BASE || (import.meta as any).env?.VITE_API_BASE_URL;
+const USE_PROXY = ((import.meta as any).env?.VITE_PROXY ?? '0') === '1';
 const ADMIN_API_PREFIX = '/admin/v1';
 
-// ENV yoksa veya hatalıysa, backend'e doğrudan bağlan
-const API_BASE_URL = ENV_API_BASE && /^https?:\/\//.test(ENV_API_BASE)
-  ? ENV_API_BASE
-  : `http://185.149.103.247:8000/api${ADMIN_API_PREFIX}`;
+// Ortam algılama: local geliştirmede origin'i kullan
+const ORIGIN = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : undefined;
+const isLocalOrigin = (() => {
+  try { if (!ORIGIN) return false; const h = new URL(ORIGIN).hostname; return h === 'localhost' || h === '127.0.0.1'; } catch { return false }
+})();
+
+function buildApiBaseFrom(raw?: string): string | undefined {
+  if (!raw || typeof raw !== 'string') return undefined;
+  try {
+    let base = raw.trim();
+    if (!/\/api(\/|$)/.test(base)) {
+      base = base.replace(/\/?$/, '') + '/api';
+    }
+    if (!base.endsWith(ADMIN_API_PREFIX)) {
+      base = base.replace(/\/?$/, '') + ADMIN_API_PREFIX;
+    }
+    return base;
+  } catch {
+    return undefined;
+  }
+}
+
+// API base seçimi: local + proxy açık ise origin üzerinden /api proxy, değilse env veya localhost backend
+const API_BASE_URL = (isLocalOrigin && ORIGIN && USE_PROXY)
+  ? `${ORIGIN}/api${ADMIN_API_PREFIX}`
+  : (buildApiBaseFrom(RAW_ENV_BASE) || `http://localhost:8000/api${ADMIN_API_PREFIX}`);
 
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
 console.log('🔧 VITE_PROXY:', import.meta.env.VITE_PROXY);
@@ -147,9 +170,11 @@ class AdminApiClient {
   }
 
   private getApiBaseUrl(): string {
-    // VITE_API_BASE'i direkt kullan, proxy kontrolü yapma
-    console.log('🎯 API Base URL kullanılıyor:', API_BASE_URL);
-    return API_BASE_URL;
+    // Eğer localStorage'da sabit bir API varsa onu kullan (debug için)
+    const override = localStorage.getItem('ADMIN_API_BASE');
+    const base = (override && /^https?:\/\//.test(override)) ? override : API_BASE_URL;
+    console.log('🎯 API Base URL kullanılıyor:', base);
+    return base;
   }
 
   private async request<T>(
@@ -205,16 +230,32 @@ class AdminApiClient {
               ...options,
               headers,
             });
-            
             if (retryResponse.ok) {
               return await retryResponse.json();
             }
+            if (retryResponse.status === 401) {
+              console.log('❌ Retry da 401 döndü. Zorunlu logout.');
+              // Zorunlu logout: tokenları temizle ve login'e yönlendir
+              this.accessToken = null;
+              this.refreshToken = null;
+              localStorage.removeItem('admin_access_token');
+              localStorage.removeItem('admin_refresh_token');
+              if (typeof window !== 'undefined') {
+                window.location.replace('/admin/login');
+              }
+              throw new Error('Authentication failed');
+            }
           }
         }
-        
-        // Refresh failed, logout
-        console.log('❌ Token refresh başarısız, logout yapılıyor...');
-        this.logout();
+        // Refresh başarısızsa: tokenları temizle ve login'e yönlendir
+        console.log('❌ Token refresh başarısız. Çıkış yapılıyor.');
+        this.accessToken = null;
+        this.refreshToken = null;
+        localStorage.removeItem('admin_access_token');
+        localStorage.removeItem('admin_refresh_token');
+        if (typeof window !== 'undefined') {
+          window.location.replace('/admin/login');
+        }
         throw new Error('Authentication failed');
       }
 
@@ -224,11 +265,47 @@ class AdminApiClient {
         throw new Error(errorData.detail || `HTTP ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('✅ Response data alındı:', data);
-      return data;
-    } catch (error) {
+      // 204 No Content
+      if (response.status === 204) {
+        console.log('✅ No content (204)');
+        return undefined as unknown as T;
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        console.log('✅ JSON data alındı');
+        return data as T;
+      }
+
+      // JSON değilse metni oku ve daha anlamlı hata ver
+      const text = await response.text();
+      const snippet = (text || '').slice(0, 200);
+      if (/<!doctype/i.test(text) || /<html/i.test(text)) {
+        throw new Error(`Expected JSON, received HTML from ${url}. Muhtemel neden: dev proxy kapalı veya API_BASE yanlış. Lokal için: 'npm run dev:local' ile VITE_PROXY=1 çalıştır ya da VITE_API_BASE'i backend'e ayarla (örn: http://localhost:8000/api${ADMIN_API_PREFIX}). Body: ${snippet}...`);
+      }
+      try {
+        return JSON.parse(text) as T;
+      } catch {
+        throw new Error(`Unexpected response (content-type: ${contentType || 'unknown'}). Body: ${snippet}...`);
+      }
+    } catch (error: any) {
       console.error('❌ API request failed:', error);
+      // Ağ hatasıysa ve proxy aktifse bir kere origin'e fallback yap
+      if (USE_PROXY && typeof window !== 'undefined' && ORIGIN) {
+        try {
+          const altBase = `${ORIGIN}/api${ADMIN_API_PREFIX}`;
+          if (!url.startsWith(altBase)) {
+            console.log('🌐 Ağ hatası - origin fallback deneniyor:', altBase);
+            const altResp = await fetch(`${altBase}${endpoint}`, { ...options, headers });
+            if (altResp.ok) {
+              return await altResp.json();
+            }
+          }
+        } catch (e) {
+          console.log('🌐 Origin fallback da başarısız:', e);
+        }
+      }
       throw error;
     }
   }
@@ -246,9 +323,12 @@ class AdminApiClient {
 
       // Token'ları kaydet
       this.accessToken = response.access_token;
-      this.refreshToken = response.access_token; // Backend'de refresh token yok, access token'ı kullan
+      // DÜZELTME: refresh token'ı doğru kaydet
+      this.refreshToken = (response as any).refresh_token || null;
       localStorage.setItem('admin_access_token', response.access_token);
-      localStorage.setItem('admin_refresh_token', response.access_token);
+      if ((response as any).refresh_token) {
+        localStorage.setItem('admin_refresh_token', (response as any).refresh_token);
+      }
 
       console.log('✅ Token\'lar kaydedildi');
       console.log('  - accessToken:', this.accessToken ? this.accessToken.substring(0, 20) + '...' : 'null');
@@ -280,6 +360,10 @@ class AdminApiClient {
       if (response.ok) {
         const data = await response.json();
         this.accessToken = data.access_token;
+        if (data.refresh_token) {
+          this.refreshToken = data.refresh_token;
+          localStorage.setItem('admin_refresh_token', data.refresh_token);
+        }
         localStorage.setItem('admin_access_token', data.access_token);
         console.log('✅ Token refresh başarılı');
         return true;
@@ -364,6 +448,16 @@ class AdminApiClient {
     } catch (error) {
       throw error;
     }
+  }
+
+  async getDonation(id: string){
+    return this.request(`/donations/${id}`)
+  }
+  async refundDonation(id: string, note?: string){
+    return this.request(`/donations/${id}/refund`, { method:'POST', body: JSON.stringify({ note }) })
+  }
+  async linkDonationToBroadcast(id: string, broadcastId: string){
+    return this.request(`/donations/${id}/broadcast`, { method:'PATCH', body: JSON.stringify({ broadcastId }) })
   }
 
   // Dashboard endpoints (eski format - geriye uyumluluk)
@@ -644,6 +738,56 @@ class AdminApiClient {
     return this.request(endpoint);
   }
 
+  // --- Media endpoints (review, package, publish) ---
+  async listMedia(params: { status?: string; donationId?: string } = {}): Promise<{ items: any[] }> {
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined) sp.append(k, String(v)); });
+    const qs = sp.toString();
+    return this.request(`/media${qs ? `?${qs}` : ''}`);
+  }
+
+  async reviewMedia(assetId: string, action: 'approve' | 'reject', note?: string): Promise<any> {
+    return this.request(`/media/${assetId}/review`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action, note }),
+    });
+  }
+
+  async createMediaPackage(donationId: string, title: string, note?: string): Promise<{ packageId: string; status: string }> {
+    return this.request(`/media-packages`, {
+      method: 'POST',
+      body: JSON.stringify({ donationId, title, note }),
+    });
+  }
+
+  async addMediaPackageItems(packageId: string, mediaAssetIds: string[], positions?: number[]): Promise<any> {
+    return this.request(`/media-packages/${packageId}/items`, {
+      method: 'POST',
+      body: JSON.stringify({ mediaAssetIds, positions }),
+    });
+  }
+
+  async updateMediaPackage(packageId: string, status: 'published' | 'draft'): Promise<any> {
+    return this.request(`/media-packages/${packageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // Notifications
+  async sendNotification(payload: { template: string; variables?: Record<string,string>; targets?: string[]; channel?: 'push'|'sms'|'email' }){
+    return this.request('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+  async getNotifications(params: { page?: number; size?: number } = {}){
+    const sp = new URLSearchParams()
+    Object.entries(params).forEach(([k,v])=>{ if(v!==undefined) sp.append(k, String(v)) })
+    const qs = sp.toString()
+    return this.request(`/notifications${qs?`?${qs}`:''}`)
+  }
+
   // Utility methods
   isAuthenticated(): boolean {
     console.log('🔍 Admin authentication kontrolü:');
@@ -723,3 +867,30 @@ export const streamsAPI = {
     return adminApi.stopStream(streamId);
   }
 };
+
+// --- Roles & Permissions (RBAC) ---
+export type RoleKey = 'owner' | 'admin' | 'publisher' | 'viewer'
+export interface PermissionMatrixEntry {
+  page: string
+  permissions: {
+    view: RoleKey[]
+    create?: RoleKey[]
+    update?: RoleKey[]
+    delete?: RoleKey[]
+  }
+}
+
+export const rolesAPI = {
+  async getRoles(): Promise<{ roles: RoleKey[] }> {
+    return (adminApi as any).request('/roles', { method: 'GET' })
+  },
+  async getRoleMatrix(): Promise<{ matrix: PermissionMatrixEntry[] }> {
+    return (adminApi as any).request('/roles/matrix', { method: 'GET' })
+  },
+  async updateRoleMatrix(payload: { matrix: PermissionMatrixEntry[] }): Promise<{ success: boolean }>{
+    return (adminApi as any).request('/roles/matrix', { method: 'POST', body: JSON.stringify(payload) })
+  },
+  async assignUserRole(userId: string, role: RoleKey){
+    return (adminApi as any).request(`/users/${userId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) })
+  }
+}

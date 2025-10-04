@@ -129,8 +129,8 @@ export default function HomeScreen() {
 
       {/* Kurban Kampanyaları */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.banners}>
-        <CampaignCard title={t('home.campaigns.kurban2025')} image={require('../../assets/koç.png')} onDonate={() => openKurban('Türkiye - koç', 'Koç Bağışı')} />
-        <CampaignCard title={t('home.campaigns.largeAnimal')} image={require('../../assets/büyükbaş.png')} onDonate={() => openKurban('Türkiye - büyükbaş', 'Büyükbaş Bağışı')} />
+        <CampaignCard title={t('home.campaigns.kurban2025')} image={require('../../assets/koc.png')} onDonate={() => openKurban('Türkiye - koç', 'Koç Bağışı')} />
+        <CampaignCard title={t('home.campaigns.largeAnimal')} image={require('../../assets/buyukbas.png')} onDonate={() => openKurban('Türkiye - büyükbaş', 'Büyükbaş Bağışı')} />
         <CampaignCard title={t('home.campaigns.sheep')} image={require('../../assets/koyun.png')} onDonate={() => openKurban('Filistin - koyun', 'Koyun Bağışı')} />
       </ScrollView>
 
